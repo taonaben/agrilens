@@ -1,0 +1,19 @@
+{
+  "field_photos": {
+    "n": 15,
+    "max_prob_median": 0.8603691458702087,
+    "max_prob_p10": 0.5683518409729004,
+    "max_prob_p90": 0.999809718132019,
+    "top_pred_counts": {
+      "tomato__late_blight": 9,
+      "maize__gray_leaf_spot": 3,
+      "maize__healthy": 1,
+      "tomato__early_blight": 1,
+      "tomato__leaf_mold": 1
+    }
+  },
+  "unsupported": {
+    "n": 0,
+    "note": "no unsupported images found"
+  }
+}

@@ -1,0 +1,65 @@
+[
+  {
+    "id": 0,
+    "crop": "maize",
+    "condition": "common_rust",
+    "folder": "Corn_(maize)___Common_rust_",
+    "label": "maize__common_rust"
+  },
+  {
+    "id": 1,
+    "crop": "maize",
+    "condition": "northern_leaf_blight",
+    "folder": "Corn_(maize)___Northern_Leaf_Blight",
+    "label": "maize__northern_leaf_blight"
+  },
+  {
+    "id": 2,
+    "crop": "maize",
+    "condition": "gray_leaf_spot",
+    "folder": "Corn_(maize)___Cercospora_leaf_spot Gray_leaf_spot",
+    "label": "maize__gray_leaf_spot"
+  },
+  {
+    "id": 3,
+    "crop": "maize",
+    "condition": "healthy",
+    "folder": "Corn_(maize)___healthy",
+    "label": "maize__healthy"
+  },
+  {
+    "id": 4,
+    "crop": "tomato",
+    "condition": "bacterial_spot",
+    "folder": "Tomato___Bacterial_spot",
+    "label": "tomato__bacterial_spot"
+  },
+  {
+    "id": 5,
+    "crop": "tomato",
+    "condition": "early_blight",
+    "folder": "Tomato___Early_blight",
+    "label": "tomato__early_blight"
+  },
+  {
+    "id": 6,
+    "crop": "tomato",
+    "condition": "late_blight",
+    "folder": "Tomato___Late_blight",
+    "label": "tomato__late_blight"
+  },
+  {
+    "id": 7,
+    "crop": "tomato",
+    "condition": "leaf_mold",
+    "folder": "Tomato___Leaf_Mold",
+    "label": "tomato__leaf_mold"
+  },
+  {
+    "id": 8,
+    "crop": "tomato",
+    "condition": "healthy",
+    "folder": "Tomato___healthy",
+    "label": "tomato__healthy"
+  }
+]

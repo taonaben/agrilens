@@ -1,0 +1,49 @@
+I’m building the plant disease image classifier for AgriLens, an offline-first farming assistant.
+
+Help me develop one lightweight, multi-class image classification model using MobileNetV3-Small with pretrained weights and transfer learning. The model should analyse a photograph of a maize or tomato leaf and predict which supported crop-condition class it resembles.
+
+The initial nine classes are:
+1. Maize — common rust
+2. Maize — northern leaf blight
+3. Maize — gray leaf spot
+4. Maize — healthy
+5. Tomato — bacterial spot
+6. Tomato — early blight
+7. Tomato — late blight
+8. Tomato — leaf mold
+9. Tomato — healthy
+
+Expected behaviour:
+- Accept one leaf image and return scores for the nine classes.
+- Provide a predicted crop and condition, expressed as a possible condition rather than a confirmed diagnosis.
+- Support an uncertainty/rejection mechanism for unclear images, unsupported conditions, and unrelated inputs. Do not assume a softmax confidence threshold alone reliably detects these.
+- Treat “healthy” as a supported class prediction, not proof that the plant has no problems.
+- Run entirely offline inside a Flutter mobile app after conversion to TensorFlow Lite (.tflite).
+- Keep model size, inference time, and memory use suitable for mobile devices.
+
+This is an image classifier, not an LLM, object detector, or disease-severity estimator. It does not generate treatment advice. Verified agricultural guidance and a separate hosted conversational LLM handle explanations elsewhere in AgriLens.
+
+Development environment:
+- Windows 11
+- AMD Radeon RX 5700 with 8 GB VRAM
+- Python 3.11 and Jupyter notebooks
+- PyTorch 2.4.1 with torch-directml
+- GPU training uses torch_directml.device(), not CUDA
+- MobileNetV3-Small has successfully completed forward passes, backward passes, and optimizer steps through DirectML.
+- A basic conversion test using litert-torch in Google Colab successfully produced a .tflite file with outputs matching PyTorch. Conversion with trained weights and execution inside Flutter still require verification.
+
+Dataset and workflow:
+- Start with original PlantVillage colour images for the nine classes.
+- Inspect labels, image quality, class balance, duplicates, and related images of the same leaf.
+- Keep related images in the same split to prevent data leakage.
+- Create reproducible training, validation, and held-out test splits.
+- Apply augmentation only to training data.
+- First train the classification head, then selectively fine-tune the backbone with a lower learning rate.
+- Evaluate per-class precision, recall, F1, and a confusion matrix.
+- Test separately on realistic field photographs and unsupported inputs. PlantVillage test accuracy alone is insufficient evidence of field performance.
+- Export trained weights, a TFLite model, the exact ordered class mapping, preprocessing specifications, and evaluation results.
+- Compare PyTorch and TFLite outputs and benchmark the model on a representative Android phone.
+
+The desired outcome is a reproducible, compact offline baseline that recognises supported leaf conditions, communicates uncertainty appropriately, and has measured limitations.
+
+Guide me step by step with explained Jupyter notebook cells. Preserve the working DirectML environment and keep conversion dependencies in a separate environment.

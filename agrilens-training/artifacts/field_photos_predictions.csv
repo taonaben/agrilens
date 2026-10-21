@@ -1,0 +1,16 @@
+path,pred_class_id,pred_label,max_prob
+C:\Users\baabyface\Documents\my work\agrilens\agrilens-training\data\field_photos\WhatsApp Image 2026-10-19 at 19.14.20.jpeg,2,maize__gray_leaf_spot,0.5823575854301453
+C:\Users\baabyface\Documents\my work\agrilens\agrilens-training\data\field_photos\WhatsApp Image 2026-10-19 at 19.14.22.jpeg,3,maize__healthy,0.6697393655776978
+C:\Users\baabyface\Documents\my work\agrilens\agrilens-training\data\field_photos\WhatsApp Image 2026-10-19 at 19.14.23.jpeg,6,tomato__late_blight,0.8536696434020996
+C:\Users\baabyface\Documents\my work\agrilens\agrilens-training\data\field_photos\WhatsApp Image 2026-10-19 at 19.14.25.jpeg,6,tomato__late_blight,0.9995489716529846
+C:\Users\baabyface\Documents\my work\agrilens\agrilens-training\data\field_photos\WhatsApp Image 2026-10-19 at 19.14.40.jpeg,5,tomato__early_blight,0.6683143377304077
+C:\Users\baabyface\Documents\my work\agrilens\agrilens-training\data\field_photos\WhatsApp Image 2026-10-20 at 06.54.50.jpeg,6,tomato__late_blight,0.9999961853027344
+C:\Users\baabyface\Documents\my work\agrilens\agrilens-training\data\field_photos\WhatsApp Image 2026-10-20 at 06.54.51 (1).jpeg,6,tomato__late_blight,0.7073785066604614
+C:\Users\baabyface\Documents\my work\agrilens\agrilens-training\data\field_photos\WhatsApp Image 2026-10-20 at 06.54.51.jpeg,6,tomato__late_blight,0.9923816323280334
+C:\Users\baabyface\Documents\my work\agrilens\agrilens-training\data\field_photos\WhatsApp Image 2026-10-20 at 06.54.52 (1).jpeg,7,tomato__leaf_mold,0.2959049642086029
+C:\Users\baabyface\Documents\my work\agrilens\agrilens-training\data\field_photos\WhatsApp Image 2026-10-20 at 06.54.52.jpeg,2,maize__gray_leaf_spot,0.8603691458702087
+C:\Users\baabyface\Documents\my work\agrilens\agrilens-training\data\field_photos\WhatsApp Image 2026-10-20 at 07.07.18 (1).jpeg,6,tomato__late_blight,0.9955180287361145
+C:\Users\baabyface\Documents\my work\agrilens\agrilens-training\data\field_photos\WhatsApp Image 2026-10-20 at 07.07.18.jpeg,6,tomato__late_blight,0.9987525939941406
+C:\Users\baabyface\Documents\my work\agrilens\agrilens-training\data\field_photos\WhatsApp Image 2026-10-20 at 07.07.19 (1).jpeg,6,tomato__late_blight,0.999983549118042
+C:\Users\baabyface\Documents\my work\agrilens\agrilens-training\data\field_photos\WhatsApp Image 2026-10-20 at 07.07.19.jpeg,6,tomato__late_blight,0.9777100086212158
+C:\Users\baabyface\Documents\my work\agrilens\agrilens-training\data\field_photos\WhatsApp Image 2026-10-20 at 07.07.20.jpeg,2,maize__gray_leaf_spot,0.5590146780014038

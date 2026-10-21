@@ -1,0 +1,65 @@
+{
+  "seeds": [
+    7,
+    42,
+    123
+  ],
+  "epochs_max": 12,
+  "patience": 3,
+  "unfreeze_last_blocks": 4,
+  "backbone_lr": 0.0001,
+  "head_lr": 0.0003,
+  "imbalance_mode": "class_weighted_loss",
+  "class_weights": [
+    0.9059035008537478,
+    1.0965508268679618,
+    2.104522339030712,
+    0.9281615721277957,
+    0.5074033040376263,
+    1.0793193138743225,
+    0.5655116165509174,
+    1.134419699267306,
+    0.67820782738961
+  ],
+  "best_run": {
+    "seed": 123,
+    "best_epoch": 12,
+    "best_val_loss": 0.025906379482849188,
+    "val_acc": 0.9906759906759907,
+    "test_loss": 0.02911509823457751,
+    "test_acc": 0.9912485414235706,
+    "checkpoint": "C:\\Users\\baabyface\\Documents\\my work\\agrilens\\agrilens-training\\artifacts\\mobilenetv3_finetune_best.pt"
+  },
+  "seed_rows": [
+    {
+      "seed": 123,
+      "best_epoch": 12,
+      "best_val_loss": 0.025906379482849188,
+      "val_acc": 0.9906759906759907,
+      "test_loss": 0.02911509823457751,
+      "test_acc": 0.9912485414235706,
+      "best_checkpoint": "C:\\Users\\baabyface\\Documents\\my work\\agrilens\\agrilens-training\\artifacts\\mobilenetv3_finetune_seed123_best.pt",
+      "last_checkpoint": "C:\\Users\\baabyface\\Documents\\my work\\agrilens\\agrilens-training\\artifacts\\mobilenetv3_finetune_seed123_last.pt"
+    },
+    {
+      "seed": 42,
+      "best_epoch": 9,
+      "best_val_loss": 0.02617580648464077,
+      "val_acc": 0.9895104895104895,
+      "test_loss": 0.033188637277197404,
+      "test_acc": 0.9877479579929989,
+      "best_checkpoint": "C:\\Users\\baabyface\\Documents\\my work\\agrilens\\agrilens-training\\artifacts\\mobilenetv3_finetune_seed42_best.pt",
+      "last_checkpoint": "C:\\Users\\baabyface\\Documents\\my work\\agrilens\\agrilens-training\\artifacts\\mobilenetv3_finetune_seed42_last.pt"
+    },
+    {
+      "seed": 7,
+      "best_epoch": 10,
+      "best_val_loss": 0.027915864396072507,
+      "val_acc": 0.9900932400932401,
+      "test_loss": 0.03376804025351793,
+      "test_acc": 0.9883313885647608,
+      "best_checkpoint": "C:\\Users\\baabyface\\Documents\\my work\\agrilens\\agrilens-training\\artifacts\\mobilenetv3_finetune_seed7_best.pt",
+      "last_checkpoint": "C:\\Users\\baabyface\\Documents\\my work\\agrilens\\agrilens-training\\artifacts\\mobilenetv3_finetune_seed7_last.pt"
+    }
+  ]
+}
