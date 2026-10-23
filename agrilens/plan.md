@@ -22,22 +22,24 @@ The database for this first pass is **on-device Drift/SQLite**, matching the off
 
 ## 2. Set up the prediction model
 
-- [ ] Inspect `assets/models/agrilens_model.tflite` input/output tensors. Verify tensor layout, dtype, the nine-logit output, and the embedding output against the export notebook.
-- [ ] Package the exact ordered class map and preprocessing contract from `../agrilens-training/artifacts/`. Implement 224 x 224 RGB direct resize and recorded normalization, including image orientation and decode errors.
-- [ ] Load, run, and dispose the on-device interpreter through a diagnosis service. Keep inference off the UI thread where feasible.
-- [ ] Apply available calibration and rejection checks. The prototype threshold cannot run until actual class prototypes are exported; make that limitation explicit. Return `possible_match`, `uncertain`, or `unsupported_or_unclear` with model evidence.
+- [x] Inspect `assets/models/agrilens_model.tflite` input/output tensors. Verify tensor layout, dtype, the nine-logit output, and the embedding output against the export notebook.
+- [x] Package the exact ordered class map and preprocessing contract from `../agrilens-training/artifacts/`. Implement 224 x 224 RGB direct resize and recorded normalization, including image orientation and decode errors.
+- [x] Load, run, and dispose the on-device interpreter through a diagnosis service. Keep inference off the UI thread where feasible.
+- [x] Apply available calibration and rejection checks. The prototype threshold cannot run until actual class prototypes are exported; make that limitation explicit. Return `possible_match`, `uncertain`, or `unsupported_or_unclear` with model evidence.
 - [ ] Compare representative TFLite outputs with the PyTorch reference when available. Test class order, preprocessing, failure paths, and a real image on an Android device in airplane mode.
 
 **Gate:** the service returns a real, typed result from the bundled model. A highest-scoring class alone is not treated as a confirmed disease.
+**Partial:** Service code and unit tests are complete. Device inference test on Android hardware still required.
 
 ## 3. Set up the conversational model
 
-- [ ] Inspect the bundled `Qwen3-0.6B-Q8_0.gguf` asset, `llamadart` compatibility, supported devices, memory use, load time, and response speed. The empty `local_llm_service.dart` is a starting file, not an implementation.
-- [ ] Implement a small conversation service with explicit load, generate, cancel, error, and dispose behavior. Limit context and output length to fit the phone.
-- [ ] Give the model the saved prediction state and reviewed condition facts, not raw authority to diagnose an image. If reviewed guidance is not ready, limit the first prompt to accurately restating the classifier result and uncertainty; do not generate treatment advice.
+- [x] Inspect the bundled `Qwen3-0.6B-Q8_0.gguf` asset, `llamadart` compatibility, supported devices, memory use, load time, and response speed. The empty `local_llm_service.dart` is a starting file, not an implementation.
+- [x] Implement a small conversation service with explicit load, generate, cancel, error, and dispose behavior. Limit context and output length to fit the phone.
+- [x] Give the model the saved prediction state and reviewed condition facts, not raw authority to diagnose an image. If reviewed guidance is not ready, limit the first prompt to accurately restating the classifier result and uncertainty; do not generate treatment advice.
 - [ ] Exercise real generation on a target phone and save representative observed output for review. If the bundled model cannot run acceptably, report measured constraints before choosing a hosted fallback.
 
 **Gate:** a real model produces a response from real prediction context; failure is reported honestly. **Owner decision:** whether local generation quality and device cost are acceptable for release, or whether a hosted model is needed.
+**Partial:** Service code complete. On-device test required; latency and quality report needed before owner can decide on release path.
 
 ## 4. Define and implement the pipeline
 
