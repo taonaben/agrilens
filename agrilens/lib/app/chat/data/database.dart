@@ -135,6 +135,20 @@ class AgriLensDatabase extends _$AgriLensDatabase {
     );
   }
 
+  Future<int> updateMessageTextAndLifecycle(
+    String messageId,
+    String textContent,
+    String lifecycle,
+  ) {
+    return (update(messages)..where((t) => t.id.equals(messageId))).write(
+      MessagesCompanion(
+        textContent: Value(textContent),
+        lifecycle: Value(lifecycle),
+        updatedAt: Value(DateTime.now()),
+      ),
+    );
+  }
+
   // Predictions queries
   Future<Prediction?> getPredictionForMessage(String messageId) {
     return (select(predictions)
@@ -172,7 +186,19 @@ class AgriLensDatabase extends _$AgriLensDatabase {
     required Prediction prediction,
   }) async {
     await transaction(() async {
-      await into(messages).insert(message);
+      final updatedRows =
+          await (update(messages)..where((t) => t.id.equals(message.id))).write(
+        MessagesCompanion(
+          lifecycle: Value(message.lifecycle),
+          failureReason: Value(message.failureReason),
+          updatedAt: Value(message.updatedAt),
+        ),
+      );
+      if (updatedRows == 0) {
+        throw StateError(
+          'Cannot attach prediction: message ${message.id} was not found.',
+        );
+      }
       await into(predictions).insert(prediction);
       // Update conversation updatedAt timestamp
       await (update(conversations)..where(

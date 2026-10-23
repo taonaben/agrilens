@@ -15,7 +15,8 @@ import 'package:flutter/services.dart';
 import 'package:tflite_flutter/tflite_flutter.dart';
 
 import 'diagnosis_result.dart';
-import '../models/prediction.dart';
+import 'service_interfaces.dart';
+import '../models/prediction.dart' show DecisionState;
 
 /// Service that wraps the bundled TFLite leaf-diagnosis model.
 ///
@@ -23,7 +24,7 @@ import '../models/prediction.dart';
 ///   1. Call [load] once. This verifies tensor layout against the contract.
 ///   2. Call [diagnose] with a local image file path or asset path.
 ///   3. Call [dispose] when the service is no longer needed.
-class DiagnosisService {
+class DiagnosisService implements DiagnosisServiceInterface {
   Interpreter? _interpreter;
   bool _isLoaded = false;
 
@@ -34,12 +35,14 @@ class DiagnosisService {
   // ── Public API ──────────────────────────────────────────────────────────────
 
   /// Whether the model is loaded and ready for inference.
+  @override
   bool get isLoaded => _isLoaded;
 
   /// Load the bundled TFLite model and verify its output layout.
   ///
   /// Throws [DiagnosisFailure] on load or layout mismatch.
   /// Call once at app start; keep the instance alive.
+  @override
   Future<void> load() async {
     if (_isLoaded) return;
 
@@ -71,6 +74,7 @@ class DiagnosisService {
   /// - [DiagnosisMatch] – classifier found a class above thresholds
   /// - [DiagnosisUncertain] – classifier ran but evidence is weak
   /// - [DiagnosisFailure] – decode or inference error (recoverable)
+  @override
   Future<DiagnosisResult> diagnose(String imagePath) async {
     if (!_isLoaded || _interpreter == null) {
       return const DiagnosisFailure(
@@ -102,6 +106,7 @@ class DiagnosisService {
   }
 
   /// Release interpreter resources.
+  @override
   void dispose() {
     _interpreter?.close();
     _interpreter = null;

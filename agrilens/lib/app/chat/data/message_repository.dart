@@ -83,6 +83,19 @@ class MessageRepository {
     );
   }
 
+  /// Set the text content and mark message complete in one write.
+  /// Used by the pipeline to save an assistant response once generation finishes.
+  Future<void> completeMessageWithText(
+    String messageId,
+    String text,
+  ) async {
+    await _db.updateMessageTextAndLifecycle(
+      messageId,
+      text,
+      model.MessageLifecycle.complete.name,
+    );
+  }
+
   // Conversion helpers
   Message _toDbMessage(model.Message msg) {
     return Message(

@@ -43,13 +43,14 @@ The database for this first pass is **on-device Drift/SQLite**, matching the off
 
 ## 4. Define and implement the pipeline
 
-- [ ] Define the command and result contract for `analyzeImage(conversationId, image)` and `sendFollowUp(conversationId, text)`, including cancellation, retry, and error states.
-- [ ] For an image: copy the chosen file into app-owned storage; save a pending user message; run the classifier; persist prediction and decision state; build constrained conversation context; generate and save the assistant response. Do not lose the prediction if generation fails.
-- [ ] For follow-ups: load the prior saved prediction and relevant conversation context; answer from that evidence; persist user and assistant messages. If there is no prediction, say the app needs a photo rather than inventing one.
-- [ ] Keep database writes and state transitions idempotent for retries. Make model loading, image decode, inference, generation, and storage errors distinct and recoverable.
+- [x] Define the command and result contract for `analyzeImage(conversationId, image)` and `sendFollowUp(conversationId, text)`, including cancellation, retry, and error states.
+- [x] For an image: copy the chosen file into app-owned storage; save a pending user message; run the classifier; persist prediction and decision state; build constrained conversation context; generate and save the assistant response. Do not lose the prediction if generation fails.
+- [x] For follow-ups: load the prior saved prediction and relevant conversation context; answer from that evidence; persist user and assistant messages. If there is no prediction, say the app needs a photo rather than inventing one.
+- [x] Keep database writes and state transitions idempotent for retries. Make model loading, image decode, inference, generation, and storage errors distinct and recoverable.
 - [ ] Verify the sequence with a real image and real models through the service layer before wiring Chat. Use deterministic test doubles only inside automated tests, never as a runtime fallback.
 
 **Gate:** one service call produces linked, persisted user image, prediction, and assistant message, or a persisted and understandable failure state.
+**Partial:** Service-layer pipeline logic is implemented and verified with focused automated tests. Real-image and real-model service-layer verification is still pending.
 
 ## 5. Build Chat on the working pipeline
 

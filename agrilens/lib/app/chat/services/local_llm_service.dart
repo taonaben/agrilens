@@ -20,6 +20,7 @@ import 'package:flutter/services.dart';
 import 'dart:io';
 
 import 'diagnosis_result.dart';
+import 'service_interfaces.dart';
 
 /// State of the conversational model service.
 enum LlmServiceState { unloaded, loading, ready, generating, error, disposed }
@@ -97,7 +98,7 @@ Reminder: A "healthy" result means no supported condition was recognized in this
 ///   2. Call [generateResponse] with classifier context.
 ///   3. Call [cancel] to stop an in-progress generation.
 ///   4. Call [dispose] when done.
-class LocalLlmService {
+class LocalLlmService implements LlmServiceInterface {
   LlamaServiceBase? _service;
   LlmServiceState _state = LlmServiceState.unloaded;
 
@@ -110,6 +111,7 @@ class LocalLlmService {
   LlmServiceState get state => _state;
 
   /// Whether the service is ready to generate.
+  @override
   bool get isReady => _state == LlmServiceState.ready;
 
   /// Load the bundled GGUF model.
@@ -122,6 +124,7 @@ class LocalLlmService {
   /// and records [lastError] on failure; does not throw.
   String? lastError;
 
+  @override
   Future<void> load() async {
     if (_state == LlmServiceState.ready) return;
     if (_state == LlmServiceState.disposed) {
@@ -169,6 +172,7 @@ class LocalLlmService {
   /// [onChunk] is called for each streamed token as it arrives.
   ///
   /// Returns a [LlmResult] describing the final outcome.
+  @override
   Future<LlmResult> generateResponse({
     required DiagnosisResult diagnosisResult,
     List<Map<String, String>> priorMessages = const [],
@@ -228,6 +232,7 @@ class LocalLlmService {
   }
 
   /// Cancel an in-progress generation.
+  @override
   void cancel() {
     if (_generationActive && _service != null) {
       _service!.cancelGeneration();
@@ -236,6 +241,7 @@ class LocalLlmService {
   }
 
   /// Dispose the service and release native resources.
+  @override
   void dispose() {
     cancel();
     _service?.dispose();
