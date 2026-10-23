@@ -1,4 +1,3 @@
-
 /// Domain model for a conversation.
 /// Represents a thread of messages between user and assistant.
 class Conversation {

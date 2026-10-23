@@ -1,11 +1,7 @@
-/// Domain model for a prediction result.
-/// Stores classifier output, decision state, and model metadata.
+// Domain model for a prediction result.
+// Stores classifier output, decision state, and model metadata.
 
-enum DecisionState {
-  possibleMatch,
-  uncertain,
-  unsupportedOrUnclear,
-}
+enum DecisionState { possibleMatch, uncertain, unsupportedOrUnclear }
 
 class Prediction {
   final String id;

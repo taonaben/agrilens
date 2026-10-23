@@ -5,11 +5,7 @@ GoRouter createRouter({required String initialRoute}) {
   return GoRouter(
     initialLocation: initialRoute,
     routes: [
-      GoRoute(
-        path: "/",
-        name: "app",
-        builder: (context, state) => const App(),
-      ),
+      GoRoute(path: "/", name: "app", builder: (context, state) => const App()),
     ],
   );
 }

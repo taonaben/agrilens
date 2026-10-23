@@ -2,10 +2,9 @@ import 'package:agrilens/shared/utils/shared_prefs.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-final themeModeProvider =
-    AsyncNotifierProvider<ThemeModeController, ThemeMode>(
-      ThemeModeController.new,
-    );
+final themeModeProvider = AsyncNotifierProvider<ThemeModeController, ThemeMode>(
+  ThemeModeController.new,
+);
 
 class ThemeModeController extends AsyncNotifier<ThemeMode> {
   static const _storageKey = 'settings.themeMode';

@@ -1,22 +1,11 @@
-/// Domain model for a message within a conversation.
-/// Stores role, content, optional image reference, and lifecycle state.
+// Domain model for a message within a conversation.
+// Stores role, content, optional image reference, and lifecycle state.
 
-enum MessageRole {
-  user,
-  assistant,
-  system,
-}
+enum MessageRole { user, assistant, system }
 
-enum MessageContentType {
-  text,
-  image,
-}
+enum MessageContentType { text, image }
 
-enum MessageLifecycle {
-  pending,
-  complete,
-  failed,
-}
+enum MessageLifecycle { pending, complete, failed }
 
 class Message {
   final String id;

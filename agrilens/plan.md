@@ -12,11 +12,11 @@ The database for this first pass is **on-device Drift/SQLite**, matching the off
 
 ## 1. Define and build the local database
 
-- [ ] Define typed domain records and Drift tables for `conversations`, `messages`, and `predictions`. Use stable IDs, creation/update timestamps, and explicit schema versioning.
-- [ ] `messages` records conversation ID, role, content type, text, optional local image path, lifecycle state (`pending`, `complete`, `failed`), and timestamp. Store images as app-owned files referenced by path, not image blobs in SQLite.
-- [ ] `predictions` records its source message ID, crop/class ID, model and preprocessing versions, calibrated score evidence, decision state, failure reason when applicable, and timestamp. Preserve enough data to interpret a result after a model update.
-- [ ] Add repositories for creating/loading a conversation, appending messages, attaching a prediction, updating lifecycle state, and listing recent conversations. Use transactions for related writes and define image-file cleanup when a conversation is deleted.
-- [ ] Verify create/read/restart behavior, ordering, migrations, and failure recovery with a focused database test.
+- [x] Define typed domain records and Drift tables for `conversations`, `messages`, and `predictions`. Use stable IDs, creation/update timestamps, and explicit schema versioning.
+- [x] `messages` records conversation ID, role, content type, text, optional local image path, lifecycle state (`pending`, `complete`, `failed`), and timestamp. Store images as app-owned files referenced by path, not image blobs in SQLite.
+- [x] `predictions` records its source message ID, crop/class ID, model and preprocessing versions, calibrated score evidence, decision state, failure reason when applicable, and timestamp. Preserve enough data to interpret a result after a model update.
+- [x] Add repositories for creating/loading a conversation, appending messages, attaching a prediction, updating lifecycle state, and listing recent conversations. Use transactions for related writes and define image-file cleanup when a conversation is deleted.
+- [x] Verify create/read/restart behavior, ordering, migrations, and failure recovery with a focused database test.
 
 **Gate:** a real conversation and its image reference survive app restart. No Chat UI is required to prove this; a focused integration or repository test is enough.
 

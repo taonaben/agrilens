@@ -47,8 +47,7 @@ class CustomOutlinedButton extends StatelessWidget {
                   ? backgroundColor ?? AppColors.surface(brightness)
                   : disabledBackground,
           foregroundColor: foreground,
-          disabledForegroundColor:
-              isLoading ? foreground : disabledForeground,
+          disabledForegroundColor: isLoading ? foreground : disabledForeground,
           side: BorderSide(color: AppColors.border(brightness)),
           disabledMouseCursor: SystemMouseCursors.basic,
           padding: const EdgeInsets.symmetric(horizontal: 20),
