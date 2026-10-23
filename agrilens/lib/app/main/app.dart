@@ -151,13 +151,6 @@ class _AppState extends State<App> {
         ),
         iconTheme: IconThemeData(color: foreground, size: 20),
         selectedIconTheme: IconThemeData(color: primary, size: 20),
-        // textStyle: theme.textTheme.bodyMedium?.copyWith(color: foreground),
-        // selectedTextStyle: theme.textTheme.bodyMedium?.copyWith(
-        //   color: primary,
-        //   fontWeight: FontWeight.w600,
-        // ),
-        // itemMargin: const EdgeInsets.symmetric(horizontal: 12, vertical: 1),
-        // itemPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         itemTextPadding: const EdgeInsets.only(left: AppConstants.paddingSmall),
         itemDecoration: BoxDecoration(
           borderRadius: BorderRadius.circular(AppConstants.borderRadiusMedium),
