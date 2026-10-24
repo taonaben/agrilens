@@ -7,7 +7,7 @@ enum MessageContentType { text, image }
 
 enum MessageLifecycle { pending, complete, failed }
 
-class Message {
+class MessageModel {
   final String id;
   final String conversationId;
   final MessageRole role;
@@ -19,7 +19,7 @@ class Message {
   final DateTime createdAt;
   final DateTime updatedAt;
 
-  const Message({
+  const MessageModel({
     required this.id,
     required this.conversationId,
     required this.role,
@@ -32,7 +32,7 @@ class Message {
     required this.updatedAt,
   });
 
-  Message copyWith({
+  MessageModel copyWith({
     String? id,
     String? conversationId,
     MessageRole? role,
@@ -44,7 +44,7 @@ class Message {
     DateTime? createdAt,
     DateTime? updatedAt,
   }) {
-    return Message(
+    return MessageModel(
       id: id ?? this.id,
       conversationId: conversationId ?? this.conversationId,
       role: role ?? this.role,

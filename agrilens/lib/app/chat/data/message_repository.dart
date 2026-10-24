@@ -10,7 +10,7 @@ class MessageRepository {
   MessageRepository(this._db);
 
   /// Create a new message in a conversation
-  Future<model.Message> createMessage({
+  Future<model.MessageModel> createMessage({
     required String conversationId,
     required model.MessageRole role,
     required model.MessageContentType contentType,
@@ -19,7 +19,7 @@ class MessageRepository {
     model.MessageLifecycle lifecycle = model.MessageLifecycle.pending,
   }) async {
     final now = DateTime.now();
-    final message = model.Message(
+    final message = model.MessageModel(
       id: _uuid.v4(),
       conversationId: conversationId,
       role: role,
@@ -43,13 +43,13 @@ class MessageRepository {
   }
 
   /// Get a message by ID
-  Future<model.Message?> getMessage(String id) async {
+  Future<model.MessageModel?> getMessage(String id) async {
     final dbMsg = await _db.getMessage(id);
     return dbMsg != null ? _fromDbMessage(dbMsg) : null;
   }
 
   /// Get all messages for a conversation, ordered by creation time
-  Future<List<model.Message>> getMessagesForConversation(
+  Future<List<model.MessageModel>> getMessagesForConversation(
     String conversationId,
   ) async {
     final dbMsgs = await _db.getMessagesForConversation(conversationId);
@@ -85,10 +85,7 @@ class MessageRepository {
 
   /// Set the text content and mark message complete in one write.
   /// Used by the pipeline to save an assistant response once generation finishes.
-  Future<void> completeMessageWithText(
-    String messageId,
-    String text,
-  ) async {
+  Future<void> completeMessageWithText(String messageId, String text) async {
     await _db.updateMessageTextAndLifecycle(
       messageId,
       text,
@@ -97,7 +94,7 @@ class MessageRepository {
   }
 
   // Conversion helpers
-  Message _toDbMessage(model.Message msg) {
+  Message _toDbMessage(model.MessageModel msg) {
     return Message(
       id: msg.id,
       conversationId: msg.conversationId,
@@ -112,8 +109,8 @@ class MessageRepository {
     );
   }
 
-  model.Message _fromDbMessage(Message dbMsg) {
-    return model.Message(
+  model.MessageModel _fromDbMessage(Message dbMsg) {
+    return model.MessageModel(
       id: dbMsg.id,
       conversationId: dbMsg.conversationId,
       role: _parseRole(dbMsg.role),

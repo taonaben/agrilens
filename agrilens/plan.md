@@ -54,13 +54,14 @@ The database for this first pass is **on-device Drift/SQLite**, matching the off
 
 ## 5. Build Chat on the working pipeline
 
-- [ ] Replace the Chat placeholder inside the existing responsive SidebarX shell. Load the current conversation from Drift and observe new messages.
-- [ ] Add camera/gallery selection, image preview/retake, text follow-up, progress, cancellation, and retry. Ask for permissions at the point of use.
-- [ ] Render the actual saved image, decision state, possible condition, uncertainty wording, and assistant response. Keep “healthy” wording cautious.
-- [ ] Populate History from saved conversations and restore a selected thread after restart. Preserve Chat/Store/Weather, Solar Icons, theme colors, and pinned Settings.
+- [x] Replace the Chat placeholder inside the existing responsive SidebarX shell. Load the current conversation from Drift and observe new messages.
+- [x] Add camera/gallery selection, image preview/retake, text follow-up, progress, cancellation, and retry. Ask for permissions at the point of use.
+- [x] Render the actual saved image, decision state, possible condition, uncertainty wording, and assistant response. Keep “healthy” wording cautious.
+- [x] Populate History from saved conversations and restore a selected thread after restart. Preserve Chat/Store/Weather, Solar Icons, theme colors, and pinned Settings.
 - [ ] Verify the complete flow on mobile and wide layouts, plus a real phone with airplane mode enabled.
 
 **Gate:** a user can take or choose a photo, receive a real prediction and model response, leave the screen, and return to the saved conversation. No sample results appear in production.
+**Partial:** Desktop/static verification is complete for shell integration and pipeline-backed chat behavior. Real device verification (mobile + airplane mode) remains pending.
 
 ## After tonight: quality and release work
 

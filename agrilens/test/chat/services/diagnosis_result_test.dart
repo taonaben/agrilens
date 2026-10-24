@@ -8,7 +8,9 @@
 // TFLite model loaded. Those are integration tests and run outside this file.
 
 import 'package:flutter_test/flutter_test.dart';
+import 'dart:typed_data';
 import 'package:agrilens/app/chat/services/diagnosis_result.dart';
+import 'package:agrilens/app/chat/services/diagnosis_service.dart';
 import 'package:agrilens/app/chat/models/prediction.dart';
 
 void main() {
@@ -102,6 +104,21 @@ void main() {
   });
 
   group('PreprocessContract', () {
+    test('RGBA pixels become normalized RGB channel planes', () {
+      final tensor = DiagnosisService.normalizeRgbaToNchw(
+        Uint8List.fromList([255, 0, 128, 255, 0, 255, 64, 0]),
+        2,
+        1,
+      );
+      expect(tensor.length, 6);
+      expect(tensor[0], closeTo((1 - 0.485) / 0.229, 1e-5));
+      expect(tensor[1], closeTo((0 - 0.485) / 0.229, 1e-5));
+      expect(tensor[2], closeTo((0 - 0.456) / 0.224, 1e-5));
+      expect(tensor[3], closeTo((1 - 0.456) / 0.224, 1e-5));
+      expect(tensor[4], closeTo((128 / 255 - 0.406) / 0.225, 1e-5));
+      expect(tensor[5], closeTo((64 / 255 - 0.406) / 0.225, 1e-5));
+    });
+
     test('input size is 224', () {
       expect(PreprocessContract.inputSize, 224);
     });

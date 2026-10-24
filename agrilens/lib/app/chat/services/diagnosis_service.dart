@@ -58,7 +58,7 @@ class DiagnosisService implements DiagnosisServiceInterface {
       );
     }
 
-    final layoutError = _verifyOutputLayout();
+    final layoutError = _verifyInputLayout() ?? _verifyOutputLayout();
     if (layoutError != null) {
       _interpreter?.close();
       _interpreter = null;
@@ -123,6 +123,34 @@ class DiagnosisService implements DiagnosisServiceInterface {
   ///   Output 1: embedding [1, 576] float32
   ///
   /// Tensors are identified by shape, not assumed index (per plan requirement).
+  DiagnosisFailure? _verifyInputLayout() {
+    final inputs = _interpreter!.getInputTensors();
+    final expectedShape = [
+      1,
+      3,
+      PreprocessContract.inputSize,
+      PreprocessContract.inputSize,
+    ];
+    if (inputs.length != 1 ||
+        inputs.single.type != TensorType.float32 ||
+        !_sameShape(inputs.single.shape, expectedShape)) {
+      return DiagnosisFailure(
+        kind: DiagnosisFailureKind.outputLayoutMismatch,
+        message:
+            'Model input must be float32 $expectedShape; found '
+            '${inputs.map((tensor) => '${tensor.type} ${tensor.shape}').toList()}.',
+      );
+    }
+    return null;
+  }
+
+  static bool _sameShape(List<int> actual, List<int> expected) =>
+      actual.length == expected.length &&
+      List.generate(
+        actual.length,
+        (i) => i,
+      ).every((i) => actual[i] == expected[i]);
+
   DiagnosisFailure? _verifyOutputLayout() {
     final interpreter = _interpreter!;
     final outputCount = interpreter.getOutputTensors().length;
@@ -185,7 +213,7 @@ class DiagnosisService implements DiagnosisServiceInterface {
   ///   - Channel order: RGB
   ///   - Scale: uint8 / 255.0
   ///   - Normalize: (value - mean) / std  (ImageNet stats)
-  ///   - Output layout: [1, 224, 224, 3] float32, channel-last (NHWC)
+  ///   - Model input layout: [1, 3, 224, 224] float32 (NCHW)
   ///
   /// Returns null if the file cannot be decoded.
   Future<Float32List?> _preprocessImage(String imagePath) async {
@@ -217,34 +245,37 @@ class DiagnosisService implements DiagnosisServiceInterface {
 
       if (byteData == null) return null;
 
-      final pixelBytes = byteData.buffer.asUint8List();
-      final int w = PreprocessContract.inputSize;
-      final int h = PreprocessContract.inputSize;
-
-      // Build [1, H, W, 3] float32 tensor with ImageNet normalization
-      final tensor = Float32List(h * w * 3);
-      int idx = 0;
-
-      for (int y = 0; y < h; y++) {
-        for (int x = 0; x < w; x++) {
-          final int p = (y * w + x) * 4; // RGBA pixel offset
-          // R, G, B channels – A channel is ignored
-          tensor[idx++] =
-              (pixelBytes[p] / 255.0 - PreprocessContract.mean[0]) /
-              PreprocessContract.std[0];
-          tensor[idx++] =
-              (pixelBytes[p + 1] / 255.0 - PreprocessContract.mean[1]) /
-              PreprocessContract.std[1];
-          tensor[idx++] =
-              (pixelBytes[p + 2] / 255.0 - PreprocessContract.mean[2]) /
-              PreprocessContract.std[2];
-        }
-      }
-
-      return tensor;
+      return normalizeRgbaToNchw(
+        byteData.buffer.asUint8List(),
+        PreprocessContract.inputSize,
+        PreprocessContract.inputSize,
+      );
     } catch (_) {
       return null;
     }
+  }
+
+  /// Normalize decoded RGBA pixels into the channel-first model input.
+  static Float32List normalizeRgbaToNchw(
+    Uint8List rgba,
+    int width,
+    int height,
+  ) {
+    if (rgba.length != width * height * 4) {
+      throw ArgumentError('RGBA byte count does not match image dimensions.');
+    }
+    final planeSize = width * height;
+    final tensor = Float32List(planeSize * 3);
+    for (int pixel = 0; pixel < planeSize; pixel++) {
+      final offset = pixel * 4;
+      for (int channel = 0; channel < 3; channel++) {
+        tensor[channel * planeSize + pixel] =
+            (rgba[offset + channel] / 255.0 -
+                PreprocessContract.mean[channel]) /
+            PreprocessContract.std[channel];
+      }
+    }
+    return tensor;
   }
 
   // ── Internal: inference ──────────────────────────────────────────────────────
@@ -255,37 +286,27 @@ class DiagnosisService implements DiagnosisServiceInterface {
     try {
       final int h = PreprocessContract.inputSize;
       final int w = PreprocessContract.inputSize;
-      final input = inputFlat.reshape([1, h, w, 3]);
+      final input = inputFlat.reshape([1, 3, h, w]);
 
       // Prepare output buffers
-      final logitsFlat = List<double>.filled(
-        ModelContract.expectedNumClasses,
-        0.0,
-      );
-      final Map<int, Object> outputs = {
-        _logitsTensorIndex: logitsFlat.reshape([
-          1,
-          ModelContract.expectedNumClasses,
-        ]),
-      };
+      final logitsOutput = [
+        List<double>.filled(ModelContract.expectedNumClasses, 0.0),
+      ];
+      final Map<int, Object> outputs = {_logitsTensorIndex: logitsOutput};
 
-      List<double>? embeddingFlat;
+      List<List<double>>? embeddingOutput;
       if (_embeddingTensorIndex != null) {
-        embeddingFlat = List<double>.filled(
-          ModelContract.expectedEmbeddingDim,
-          0.0,
-        );
-        outputs[_embeddingTensorIndex!] = embeddingFlat.reshape([
-          1,
-          ModelContract.expectedEmbeddingDim,
-        ]);
+        embeddingOutput = [
+          List<double>.filled(ModelContract.expectedEmbeddingDim, 0.0),
+        ];
+        outputs[_embeddingTensorIndex!] = embeddingOutput;
       }
 
       interpreter.runForMultipleInputs([input], outputs);
 
       return RawInferenceOutput(
-        logits: logitsFlat,
-        embedding: embeddingFlat,
+        logits: logitsOutput.single,
+        embedding: embeddingOutput?.single,
         logitsTensorIndex: _logitsTensorIndex,
         embeddingTensorIndex: _embeddingTensorIndex,
       );

@@ -1,3 +1,12 @@
+import 'package:agrilens/app/chat/data/conversation_repository.dart';
+import 'package:agrilens/app/chat/data/database.dart';
+import 'package:agrilens/app/chat/data/message_repository.dart';
+import 'package:agrilens/app/chat/data/prediction_repository.dart';
+import 'package:agrilens/app/chat/models/conversation.dart' as model;
+import 'package:agrilens/app/chat/services/diagnosis_pipeline.dart';
+import 'package:agrilens/app/chat/services/diagnosis_service.dart';
+import 'package:agrilens/app/chat/services/local_llm_service.dart';
+import 'package:agrilens/app/chat/views/chat_page.dart';
 import 'package:agrilens/shared/theme/app_colors.dart';
 import 'package:agrilens/shared/utils/app_constants.dart';
 import 'package:flutter/material.dart';
@@ -6,32 +15,34 @@ import 'package:sidebarx/sidebarx.dart';
 import 'package:solar_icons/solar_icons.dart';
 
 class _Destination {
-  const _Destination(this.title, this.icon, this.pageLabel);
+  const _Destination({
+    required this.title,
+    required this.icon,
+    required this.pageLabel,
+    this.conversationId,
+  });
 
   final String title;
   final IconData icon;
   final String pageLabel;
+  final String? conversationId;
 }
 
-// Add a main page here; navigation and the placeholder title share this list.
-const _pages = <_Destination>[
-  _Destination('Chat', SolarIconsOutline.chatRound, 'Chat page'),
-  _Destination('Store', SolarIconsOutline.shop, 'Store page'),
-  _Destination('Weather', SolarIconsOutline.cloudSun, 'Weather page'),
-];
-
-// Replace these examples when saved chat history is available.
-const _recentChats = <_Destination>[
+const _mainPages = <_Destination>[
   _Destination(
-    'Crop planning',
-    SolarIconsOutline.chatLine,
-    'Crop planning chat',
+    title: 'Chat',
+    icon: SolarIconsOutline.chatRound,
+    pageLabel: 'Chat page',
   ),
-  _Destination('Soil health', SolarIconsOutline.chatLine, 'Soil health chat'),
   _Destination(
-    'Market prices',
-    SolarIconsOutline.chatLine,
-    'Market prices chat',
+    title: 'Store',
+    icon: SolarIconsOutline.shop,
+    pageLabel: 'Store page',
+  ),
+  _Destination(
+    title: 'Weather',
+    icon: SolarIconsOutline.cloudSun,
+    pageLabel: 'Weather page',
   ),
 ];
 
@@ -43,30 +54,216 @@ class App extends StatefulWidget {
 }
 
 class _AppState extends State<App> {
-  static final _settingsIndex = _pages.length + _recentChats.length;
   final _sidebarController = SidebarXController(
     selectedIndex: 0,
     extended: true,
   );
   final _scaffoldKey = GlobalKey<ScaffoldState>();
 
+  late final AgriLensDatabase _database;
+  late final ConversationRepository _conversationRepo;
+  late final MessageRepository _messageRepo;
+  late final PredictionRepository _predictionRepo;
+  late final DiagnosisService _diagnosisService;
+  late final LocalLlmService _llmService;
+  late final DiagnosisPipeline _pipeline;
+
+  bool _initializing = true;
+  String? _initializationError;
+  String? _serviceWarning;
+
+  List<model.Conversation> _conversations = const [];
+  String? _activeConversationId;
+
+  @override
+  void initState() {
+    super.initState();
+    _database = AgriLensDatabase();
+    _conversationRepo = ConversationRepository(_database);
+    _messageRepo = MessageRepository(_database);
+    _predictionRepo = PredictionRepository(_database);
+    _diagnosisService = DiagnosisService();
+    _llmService = LocalLlmService();
+    _pipeline = DiagnosisPipeline(
+      diagnosisService: _diagnosisService,
+      llmService: _llmService,
+      conversationRepo: _conversationRepo,
+      messageRepo: _messageRepo,
+      predictionRepo: _predictionRepo,
+    );
+    _bootstrap();
+  }
+
   @override
   void dispose() {
     _sidebarController.dispose();
+    _diagnosisService.dispose();
+    _llmService.dispose();
+    _database.close();
     super.dispose();
   }
 
+  Future<void> _bootstrap() async {
+    setState(() {
+      _initializing = true;
+      _initializationError = null;
+      _serviceWarning = null;
+    });
+
+    try {
+      await _diagnosisService.load();
+      await _llmService.load();
+      if (!_llmService.isReady && _llmService.lastError != null) {
+        _serviceWarning =
+            'Local conversation model is not ready yet: ${_llmService.lastError}';
+      }
+
+      await _reloadConversations();
+      if (_conversations.isEmpty) {
+        await _createAndSelectConversation();
+      } else {
+        _activeConversationId ??= _conversations.first.id;
+      }
+    } catch (e) {
+      _initializationError = 'Could not initialize diagnosis services: $e';
+    } finally {
+      if (mounted) {
+        setState(() {
+          _initializing = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _reloadConversations() async {
+    final conversations = await _conversationRepo.getAllConversations();
+    if (!mounted) return;
+    setState(() {
+      _conversations = conversations;
+      if (_activeConversationId != null &&
+          !_conversations.any((c) => c.id == _activeConversationId)) {
+        _activeConversationId =
+            _conversations.isEmpty ? null : _conversations.first.id;
+      }
+      _activeConversationId ??=
+          _conversations.isEmpty ? null : _conversations.first.id;
+    });
+  }
+
+  Future<String> _createAndSelectConversation() async {
+    final now = DateTime.now();
+    final title =
+        'Conversation ${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}';
+    final conv = await _conversationRepo.createConversation(title: title);
+    await _reloadConversations();
+    if (!mounted) return conv.id;
+    setState(() {
+      _activeConversationId = conv.id;
+      _sidebarController.selectIndex(0);
+    });
+    return conv.id;
+  }
+
+  List<_Destination> get _historyDestinations {
+    return _conversations
+        .map(
+          (c) => _Destination(
+            title: c.title,
+            icon: SolarIconsOutline.chatLine,
+            pageLabel: c.title,
+            conversationId: c.id,
+          ),
+        )
+        .toList(growable: false);
+  }
+
+  int get _settingsIndex => _mainPages.length + _historyDestinations.length;
+
   void _select(int index, {required bool isDrawer}) {
+    final historyStart = _mainPages.length;
+    final historyEnd = historyStart + _historyDestinations.length;
+
+    if (index >= historyStart && index < historyEnd) {
+      final dest = _historyDestinations[index - historyStart];
+      if (dest.conversationId != null) {
+        _activeConversationId = dest.conversationId;
+      }
+    }
+
     _sidebarController.selectIndex(index);
     if (isDrawer) Navigator.of(context).pop();
+    if (mounted) setState(() {});
+  }
+
+  Widget _buildMainContent({
+    required int selectedIndex,
+    required String pageLabel,
+  }) {
+    if (_initializing) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    if (_initializationError != null) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(AppConstants.paddingLarge),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(_initializationError!, textAlign: TextAlign.center),
+              const Gap(AppConstants.gapMedium),
+              FilledButton(
+                onPressed: _bootstrap,
+                child: const Text('Retry initialization'),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    final isChatTab = selectedIndex == 0;
+    final isHistoryTab =
+        selectedIndex >= _mainPages.length && selectedIndex < _settingsIndex;
+    if (isChatTab || isHistoryTab) {
+      final activeId =
+          _activeConversationId ??
+          (_conversations.isNotEmpty ? _conversations.first.id : null);
+      if (activeId == null) {
+        return Center(
+          child: FilledButton(
+            onPressed: _createAndSelectConversation,
+            child: const Text('Start conversation'),
+          ),
+        );
+      }
+      return ChatPage(
+        pipeline: _pipeline,
+        messageRepository: _messageRepo,
+        predictionRepository: _predictionRepo,
+        conversationId: activeId,
+        onCreateConversation: _createAndSelectConversation,
+        onConversationChanged: _reloadConversations,
+        serviceWarning: _serviceWarning,
+      );
+    }
+
+    return Center(
+      child: Text(pageLabel, style: Theme.of(context).textTheme.headlineMedium),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final brightness = theme.brightness;
-    final destinations = [..._pages, ..._recentChats];
     final isWide = MediaQuery.sizeOf(context).width >= 700;
+    final historyDestinations = _historyDestinations;
+    final destinations = [..._mainPages, ...historyDestinations];
+
+    if (_sidebarController.selectedIndex > _settingsIndex) {
+      _sidebarController.selectIndex(0);
+    }
 
     return AnimatedBuilder(
       animation: _sidebarController,
@@ -75,11 +272,15 @@ class _AppState extends State<App> {
         final title =
             selected == _settingsIndex
                 ? 'Settings'
-                : destinations[selected].title;
+                : selected < destinations.length
+                ? destinations[selected].title
+                : 'Chat';
         final pageLabel =
             selected == _settingsIndex
                 ? 'Settings page'
-                : destinations[selected].pageLabel;
+                : selected < destinations.length
+                ? destinations[selected].pageLabel
+                : 'Chat page';
 
         return Scaffold(
           key: _scaffoldKey,
@@ -113,8 +314,10 @@ class _AppState extends State<App> {
               Expanded(
                 child: Container(
                   color: AppColors.background(brightness),
-                  alignment: Alignment.center,
-                  child: Text(pageLabel, style: theme.textTheme.headlineMedium),
+                  child: _buildMainContent(
+                    selectedIndex: selected,
+                    pageLabel: pageLabel,
+                  ),
                 ),
               ),
             ],
@@ -183,7 +386,7 @@ class _AppState extends State<App> {
           ),
       ],
       separatorBuilder: (context, index) {
-        if (index == _pages.length - 1) {
+        if (index == _mainPages.length - 1) {
           return Padding(
             padding: const EdgeInsets.fromLTRB(26, 26, 16, 12),
             child: Text(

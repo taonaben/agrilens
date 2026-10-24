@@ -215,7 +215,7 @@ void main() {
 
   group('Prediction Operations', () {
     late model.Conversation testConversation;
-    late model.Message testMessage;
+    late model.MessageModel testMessage;
 
     setUp(() async {
       testConversation = await conversationRepo.createConversation(

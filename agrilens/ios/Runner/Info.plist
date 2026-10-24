@@ -45,5 +45,11 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	<key>NSCameraUsageDescription</key>
+	<string>AgriLens needs camera access so you can capture a leaf photo for diagnosis.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>AgriLens needs photo library access so you can choose a leaf photo for diagnosis.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>AgriLens may save captured photos to your library when you choose to do so.</string>
 </dict>
 </plist>

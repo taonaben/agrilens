@@ -51,12 +51,12 @@ class DiagnosisPipeline {
     required MessageRepository messageRepo,
     required PredictionRepository predictionRepo,
     Future<String?> Function(String sourcePath)? imageCopierOverride,
-  })  : _diagnosisService = diagnosisService,
-        _llmService = llmService,
-        _conversationRepo = conversationRepo,
-        _messageRepo = messageRepo,
-        _predictionRepo = predictionRepo,
-        _imageCopierOverride = imageCopierOverride;
+  }) : _diagnosisService = diagnosisService,
+       _llmService = llmService,
+       _conversationRepo = conversationRepo,
+       _messageRepo = messageRepo,
+       _predictionRepo = predictionRepo,
+       _imageCopierOverride = imageCopierOverride;
 
   // ── Public API ──────────────────────────────────────────────────────────────
 
@@ -78,8 +78,7 @@ class DiagnosisPipeline {
     void Function(LlmChunk)? onChunk,
   }) async {
     // ── Step 1: Copy image to app-owned storage ─────────────────────────────
-    final String? ownedPath =
-        await _copyImageToAppStorage(sourceImagePath);
+    final String? ownedPath = await _copyImageToAppStorage(sourceImagePath);
     if (ownedPath == null) {
       return const AnalyzeImageFailure(
         stage: AnalyzeImageFailureStage.imageCopy,
@@ -90,7 +89,7 @@ class DiagnosisPipeline {
     }
 
     // ── Step 2: Save pending user-image message ──────────────────────────────
-    final Message userMsg = await _messageRepo.createMessage(
+    final MessageModel userMsg = await _messageRepo.createMessage(
       conversationId: conversationId,
       role: MessageRole.user,
       contentType: MessageContentType.image,
@@ -111,8 +110,9 @@ class DiagnosisPipeline {
       );
     }
 
-    final DiagnosisResult diagnosisResult =
-        await _diagnosisService.diagnose(ownedPath);
+    final DiagnosisResult diagnosisResult = await _diagnosisService.diagnose(
+      ownedPath,
+    );
 
     // ── Step 4: Persist prediction + mark message complete (or failed) ───────
     final prediction = await _persistPredictionFromResult(
@@ -124,7 +124,8 @@ class DiagnosisPipeline {
     if (prediction == null) {
       // Inference-level failure (image decode, inference error, etc.)
       // Message is already marked failed inside _persistPredictionFromResult
-      final updatedUserMsg = await _messageRepo.getMessage(userMsg.id) ?? userMsg;
+      final updatedUserMsg =
+          await _messageRepo.getMessage(userMsg.id) ?? userMsg;
       return AnalyzeImageFailure(
         stage: AnalyzeImageFailureStage.inference,
         message: _failureMessage(diagnosisResult),
@@ -133,7 +134,7 @@ class DiagnosisPipeline {
     }
 
     // ── Step 5: Save pending assistant message ───────────────────────────────
-    final Message assistantMsg = await _messageRepo.createMessage(
+    final MessageModel assistantMsg = await _messageRepo.createMessage(
       conversationId: conversationId,
       role: MessageRole.assistant,
       contentType: MessageContentType.text,
@@ -155,16 +156,16 @@ class DiagnosisPipeline {
 
     return switch (result) {
       _LlmPersistSuccess() => AnalyzeImageSuccess(
-          userImageMessage: updatedUserMsg,
-          prediction: prediction,
-          assistantMessage: updatedAssistantMsg,
-        ),
+        userImageMessage: updatedUserMsg,
+        prediction: prediction,
+        assistantMessage: updatedAssistantMsg,
+      ),
       _LlmPersistFailure(:final reason) => AnalyzeImagePartialSuccess(
-          userImageMessage: updatedUserMsg,
-          prediction: prediction,
-          assistantMessage: updatedAssistantMsg,
-          generationFailureReason: reason,
-        ),
+        userImageMessage: updatedUserMsg,
+        prediction: prediction,
+        assistantMessage: updatedAssistantMsg,
+        generationFailureReason: reason,
+      ),
     };
   }
 
@@ -178,28 +179,32 @@ class DiagnosisPipeline {
     required String conversationId,
     void Function(LlmChunk)? onChunk,
   }) async {
-    final messages =
-        await _messageRepo.getMessagesForConversation(conversationId);
+    final messages = await _messageRepo.getMessagesForConversation(
+      conversationId,
+    );
 
     // Find the most recent user-image message
-    final imageMessages = messages
-        .where(
-          (m) =>
-              m.role == MessageRole.user &&
-              m.contentType == MessageContentType.image,
-        )
-        .toList();
+    final imageMessages =
+        messages
+            .where(
+              (m) =>
+                  m.role == MessageRole.user &&
+                  m.contentType == MessageContentType.image,
+            )
+            .toList();
 
     if (imageMessages.isEmpty) {
       return const AnalyzeImageFailure(
         stage: AnalyzeImageFailureStage.inference,
-        message: 'No image found in this conversation. Please take a photo first.',
+        message:
+            'No image found in this conversation. Please take a photo first.',
       );
     }
 
     final lastImageMsg = imageMessages.last;
-    final prediction =
-        await _predictionRepo.getPredictionForMessage(lastImageMsg.id);
+    final prediction = await _predictionRepo.getPredictionForMessage(
+      lastImageMsg.id,
+    );
 
     if (prediction == null) {
       return AnalyzeImageFailure(
@@ -210,13 +215,14 @@ class DiagnosisPipeline {
     }
 
     // Create a fresh pending assistant message (or reuse existing failed one)
-    final failedAssistant = messages
-        .where(
-          (m) =>
-              m.role == MessageRole.assistant &&
-              m.lifecycle == MessageLifecycle.failed,
-        )
-        .lastOrNull;
+    final failedAssistant =
+        messages
+            .where(
+              (m) =>
+                  m.role == MessageRole.assistant &&
+                  m.lifecycle == MessageLifecycle.failed,
+            )
+            .lastOrNull;
 
     final String assistantMessageId;
     if (failedAssistant != null) {
@@ -246,21 +252,22 @@ class DiagnosisPipeline {
       onChunk: onChunk,
     );
 
-    final updatedAssistantMsg =
-        await _messageRepo.getMessage(assistantMessageId);
+    final updatedAssistantMsg = await _messageRepo.getMessage(
+      assistantMessageId,
+    );
 
     return switch (llmResult) {
       _LlmPersistSuccess() => AnalyzeImageSuccess(
-          userImageMessage: lastImageMsg,
-          prediction: prediction,
-          assistantMessage: updatedAssistantMsg!,
-        ),
+        userImageMessage: lastImageMsg,
+        prediction: prediction,
+        assistantMessage: updatedAssistantMsg!,
+      ),
       _LlmPersistFailure(:final reason) => AnalyzeImagePartialSuccess(
-          userImageMessage: lastImageMsg,
-          prediction: prediction,
-          assistantMessage: updatedAssistantMsg!,
-          generationFailureReason: reason,
-        ),
+        userImageMessage: lastImageMsg,
+        prediction: prediction,
+        assistantMessage: updatedAssistantMsg!,
+        generationFailureReason: reason,
+      ),
     };
   }
 
@@ -281,22 +288,25 @@ class DiagnosisPipeline {
     }
 
     // ── Load conversation context ────────────────────────────────────────────
-    final messages =
-        await _messageRepo.getMessagesForConversation(conversationId);
+    final messages = await _messageRepo.getMessagesForConversation(
+      conversationId,
+    );
 
     // Find prediction from the most recent image message
-    final imageMessage = messages
-        .where(
-          (m) =>
-              m.role == MessageRole.user &&
-              m.contentType == MessageContentType.image,
-        )
-        .lastOrNull;
+    final imageMessage =
+        messages
+            .where(
+              (m) =>
+                  m.role == MessageRole.user &&
+                  m.contentType == MessageContentType.image,
+            )
+            .lastOrNull;
 
     Prediction? prediction;
     if (imageMessage != null) {
-      prediction =
-          await _predictionRepo.getPredictionForMessage(imageMessage.id);
+      prediction = await _predictionRepo.getPredictionForMessage(
+        imageMessage.id,
+      );
     }
 
     if (prediction == null) {
@@ -353,14 +363,14 @@ class DiagnosisPipeline {
 
     return switch (llmResult) {
       _LlmPersistSuccess() => SendFollowUpSuccess(
-          userMessage: userMsg,
-          assistantMessage: updatedAssistant,
-        ),
+        userMessage: userMsg,
+        assistantMessage: updatedAssistant,
+      ),
       _LlmPersistFailure(:final reason) => SendFollowUpFailure(
-          reason: SendFollowUpFailureReason.generationFailed,
-          message: reason,
-          userMessage: userMsg,
-        ),
+        reason: SendFollowUpFailureReason.generationFailed,
+        message: reason,
+        userMessage: userMsg,
+      ),
     };
   }
 
@@ -380,9 +390,8 @@ class DiagnosisPipeline {
         await imagesDir.create(recursive: true);
       }
 
-      final ext = sourcePath.contains('.')
-          ? '.${sourcePath.split('.').last}'
-          : '.jpg';
+      final ext =
+          sourcePath.contains('.') ? '.${sourcePath.split('.').last}' : '.jpg';
       final destPath = '${imagesDir.path}/${_uuid.v4()}$ext';
 
       await File(sourcePath).copy(destPath);
@@ -511,8 +520,7 @@ class DiagnosisPipeline {
       if (classEntry == null) {
         return DiagnosisFailure(
           kind: DiagnosisFailureKind.outputLayoutMismatch,
-          message:
-              'Class ID ${prediction.classId} not found in class map.',
+          message: 'Class ID ${prediction.classId} not found in class map.',
         );
       }
       return DiagnosisUncertain(
@@ -548,7 +556,7 @@ class DiagnosisPipeline {
   /// Build a prior-message list for LocalLlmService from DB messages.
   /// Excludes image messages (LLM only sees text) and the most recent
   /// user message (it's passed as userFollowUp instead).
-  List<Map<String, String>> _buildPriorMessages(List<Message> messages) {
+  List<Map<String, String>> _buildPriorMessages(List<MessageModel> messages) {
     return messages
         .where(
           (m) =>
@@ -557,12 +565,7 @@ class DiagnosisPipeline {
               m.textContent != null &&
               m.textContent!.isNotEmpty,
         )
-        .map(
-          (m) => {
-            'role': m.role.name,
-            'content': m.textContent!,
-          },
-        )
+        .map((m) => {'role': m.role.name, 'content': m.textContent!})
         .toList();
   }
 

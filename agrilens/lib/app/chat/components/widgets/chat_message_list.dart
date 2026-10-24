@@ -1,0 +1,53 @@
+import 'package:agrilens/app/chat/components/widgets/message_bubble.dart';
+import 'package:agrilens/app/chat/models/message.dart';
+import 'package:agrilens/app/chat/models/prediction.dart';
+import 'package:agrilens/shared/utils/app_constants.dart';
+import 'package:flutter/material.dart';
+
+class ChatMessageList extends StatelessWidget {
+  const ChatMessageList({
+    super.key,
+    required this.isLoading,
+    required this.messages,
+    required this.predictionsByMessageId,
+  });
+
+  final bool isLoading;
+  final List<MessageModel> messages;
+  final Map<String, Prediction> predictionsByMessageId;
+
+  @override
+  Widget build(BuildContext context) {
+    if (isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    if (messages.isEmpty) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(AppConstants.paddingXLarge),
+          child: Text(
+            'Start by taking or selecting a maize or tomato leaf photo.',
+            textAlign: TextAlign.center,
+            style: Theme.of(context).textTheme.bodyLarge,
+          ),
+        ),
+      );
+    }
+
+    return ListView.builder(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppConstants.paddingMedium,
+        vertical: AppConstants.paddingSmall,
+      ),
+      itemCount: messages.length,
+      itemBuilder: (context, index) {
+        final message = messages[index];
+        return MessageBubble(
+          message: message,
+          prediction: predictionsByMessageId[message.id],
+        );
+      },
+    );
+  }
+}

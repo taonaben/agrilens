@@ -12,9 +12,9 @@ sealed class AnalyzeImageResult {
 /// Full pipeline completed successfully.
 /// Both the prediction and the assistant message are persisted.
 class AnalyzeImageSuccess extends AnalyzeImageResult {
-  final Message userImageMessage;
+  final MessageModel userImageMessage;
   final Prediction prediction;
-  final Message assistantMessage;
+  final MessageModel assistantMessage;
 
   const AnalyzeImageSuccess({
     required this.userImageMessage,
@@ -27,11 +27,11 @@ class AnalyzeImageSuccess extends AnalyzeImageResult {
 /// The prediction IS persisted; only the assistant response is missing.
 /// The caller may retry generation separately via [DiagnosisPipeline.retryAssistantResponse].
 class AnalyzeImagePartialSuccess extends AnalyzeImageResult {
-  final Message userImageMessage;
+  final MessageModel userImageMessage;
   final Prediction prediction;
 
   /// The failed/cancelled assistant message (lifecycle = failed/pending)
-  final Message assistantMessage;
+  final MessageModel assistantMessage;
 
   final String generationFailureReason;
 
@@ -50,7 +50,7 @@ class AnalyzeImageFailure extends AnalyzeImageResult {
   final String message;
 
   /// The persisted user message if it was saved before failure, else null.
-  final Message? userImageMessage;
+  final MessageModel? userImageMessage;
 
   const AnalyzeImageFailure({
     required this.stage,
@@ -79,8 +79,8 @@ sealed class SendFollowUpResult {
 
 /// Follow-up succeeded; both messages persisted.
 class SendFollowUpSuccess extends SendFollowUpResult {
-  final Message userMessage;
-  final Message assistantMessage;
+  final MessageModel userMessage;
+  final MessageModel assistantMessage;
 
   const SendFollowUpSuccess({
     required this.userMessage,
@@ -94,7 +94,7 @@ class SendFollowUpFailure extends SendFollowUpResult {
   final String message;
 
   /// The persisted user message, if it was saved before failure
-  final Message? userMessage;
+  final MessageModel? userMessage;
 
   const SendFollowUpFailure({
     required this.reason,

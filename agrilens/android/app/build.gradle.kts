@@ -7,7 +7,7 @@ plugins {
 
 android {
     namespace = "com.example.agrilens"
-    compileSdk = flutter.compileSdkVersion
+    compileSdk = 36 // Required by tflite_flutter 0.12.1.
     ndkVersion = "27.0.12077973"
 
     compileOptions {

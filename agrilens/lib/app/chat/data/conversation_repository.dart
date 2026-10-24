@@ -13,7 +13,7 @@ class ConversationRepository {
   /// Create a new conversation with optional initial message
   Future<model.Conversation> createConversation({
     String? title,
-    model.Message? initialMessage,
+    model.MessageModel? initialMessage,
   }) async {
     final now = DateTime.now();
     final conversationId = _uuid.v4();
@@ -94,7 +94,7 @@ class ConversationRepository {
     );
   }
 
-  Message _toDbMessage(model.Message msg) {
+  Message _toDbMessage(model.MessageModel msg) {
     return Message(
       id: msg.id,
       conversationId: msg.conversationId,
