@@ -12,63 +12,137 @@ class PendingImagePreviewCard extends StatelessWidget {
     required this.imagePath,
     required this.isBusy,
     required this.onClearTap,
+    required this.onReplaceTap,
   });
 
   final String imagePath;
   final bool isBusy;
   final VoidCallback onClearTap;
+  final VoidCallback onReplaceTap;
 
   @override
   Widget build(BuildContext context) {
     final brightness = Theme.of(context).brightness;
 
-    return Container(
-      width: double.infinity,
-      margin: const EdgeInsets.all(AppConstants.paddingMedium),
-      padding: const EdgeInsets.all(AppConstants.paddingMedium),
-      decoration: BoxDecoration(
-        color: AppColors.surfaceAlt(brightness),
-        borderRadius: BorderRadius.circular(AppConstants.borderRadiusMedium),
-        border: Border.all(color: AppColors.border(brightness)),
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        AppConstants.paddingMedium,
+        AppConstants.paddingSmall,
+        AppConstants.paddingMedium,
+        0,
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Image ready to send',
-            style: Theme.of(
-              context,
-            ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
-          ),
-          const Gap(AppConstants.gapSmall),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(
-              AppConstants.borderRadiusMedium,
-            ),
-            child: Image.file(
-              File(imagePath),
-              height: 180,
-              fit: BoxFit.cover,
-              errorBuilder:
-                  (context, error, stackTrace) => const SizedBox(
-                    height: 140,
-                    child: Center(child: Text('Could not preview image')),
-                  ),
-            ),
-          ),
-          const Gap(AppConstants.gapSmall),
-          Wrap(
-            spacing: AppConstants.gapSmall,
-            children: [
-              OutlinedButton.icon(
-                onPressed: isBusy ? null : onClearTap,
-                icon: const Icon(SolarIconsOutline.trashBinTrash),
-                label: const Text('Remove image'),
+      child: Align(
+        alignment: Alignment.centerLeft,
+        child: Row(
+          children: [
+            InkWell(
+              onTap: () => _openPreview(context),
+              borderRadius: BorderRadius.circular(
+                AppConstants.borderRadiusMedium,
               ),
-            ],
-          ),
-        ],
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(
+                  AppConstants.borderRadiusMedium,
+                ),
+                child: Image.file(
+                  File(imagePath),
+                  width: 64,
+                  height: 64,
+                  fit: BoxFit.cover,
+                  errorBuilder:
+                      (context, error, stackTrace) => Container(
+                        width: 64,
+                        height: 64,
+                        color: AppColors.surfaceAlt(brightness),
+                        alignment: Alignment.center,
+                        child: const Icon(SolarIconsOutline.gallery),
+                      ),
+                ),
+              ),
+            ),
+            const Gap(AppConstants.gapSmall),
+            Text('Photo ready', style: Theme.of(context).textTheme.bodySmall),
+            const Spacer(),
+            IconButton(
+              tooltip: 'Remove photo',
+              onPressed: isBusy ? null : onClearTap,
+              icon: const Icon(SolarIconsOutline.closeCircle),
+            ),
+          ],
+        ),
       ),
+    );
+  }
+
+  Future<void> _openPreview(BuildContext context) async {
+    await showDialog<void>(
+      context: context,
+      barrierColor: Colors.black,
+      builder:
+          (dialogContext) => Dialog.fullscreen(
+            backgroundColor: Colors.black,
+            child: SafeArea(
+              child: Column(
+                children: [
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: IconButton(
+                      tooltip: 'Close preview',
+                      color: Colors.white,
+                      onPressed: () => Navigator.pop(dialogContext),
+                      icon: const Icon(SolarIconsOutline.closeCircle),
+                    ),
+                  ),
+                  Expanded(
+                    child: InteractiveViewer(
+                      child: Center(
+                        child: Image.file(
+                          File(imagePath),
+                          fit: BoxFit.contain,
+                          errorBuilder:
+                              (context, error, stackTrace) => const Text(
+                                'Could not preview image',
+                                style: TextStyle(color: Colors.white),
+                              ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.all(AppConstants.paddingLarge),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        OutlinedButton.icon(
+                          onPressed:
+                              isBusy
+                                  ? null
+                                  : () {
+                                    Navigator.pop(dialogContext);
+                                    onReplaceTap();
+                                  },
+                          icon: const Icon(SolarIconsOutline.refresh),
+                          label: const Text('Replace'),
+                        ),
+                        const Gap(AppConstants.gapMedium),
+                        FilledButton.tonalIcon(
+                          onPressed:
+                              isBusy
+                                  ? null
+                                  : () {
+                                    Navigator.pop(dialogContext);
+                                    onClearTap();
+                                  },
+                          icon: const Icon(SolarIconsOutline.trashBinTrash),
+                          label: const Text('Remove'),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
     );
   }
 }

@@ -24,39 +24,62 @@ class MessageBubble extends StatelessWidget {
         isUser
             ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.12)
             : AppColors.surfaceAlt(brightness);
-    final borderColor =
-        isUser
-            ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.4)
-            : AppColors.border(brightness);
 
     return Align(
       alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
       child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 580),
+        constraints: BoxConstraints(
+          maxWidth: MediaQuery.sizeOf(context).width < 600 ? 320 : 620,
+        ),
         child: Container(
-          margin: const EdgeInsets.symmetric(vertical: AppConstants.gapXSmall),
-          padding: const EdgeInsets.all(AppConstants.paddingMedium),
+          margin: const EdgeInsets.symmetric(vertical: AppConstants.gapSmall),
+          padding:
+              isUser
+                  ? const EdgeInsets.symmetric(
+                    horizontal: AppConstants.paddingMedium,
+                    vertical: AppConstants.paddingSmall,
+                  )
+                  : EdgeInsets.zero,
           decoration: BoxDecoration(
-            color: bubbleColor,
+            color: isUser ? bubbleColor : Colors.transparent,
             borderRadius: BorderRadius.circular(AppConstants.borderRadiusLarge),
-            border: Border.all(color: borderColor),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              if (message.contentType == MessageContentType.image)
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(SolarIconsOutline.gallery, size: 18),
-                    const Gap(AppConstants.gapXSmall),
-                    Text(
-                      File(message.localImagePath ?? '').existsSync()
-                          ? 'Leaf image attached'
-                          : 'Leaf image unavailable',
+              if (message.contentType == MessageContentType.image) ...[
+                if (message.localImagePath case final imagePath?)
+                  GestureDetector(
+                    onTap: () => _showImagePreview(context, imagePath),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(
+                        AppConstants.borderRadiusMedium,
+                      ),
+                      child: Image.file(
+                        File(imagePath),
+                        width: 260,
+                        height: 220,
+                        fit: BoxFit.contain,
+                        errorBuilder:
+                            (context, error, stackTrace) => Container(
+                              width: 220,
+                              height: 100,
+                              color: AppColors.surfaceAlt(brightness),
+                              alignment: Alignment.center,
+                              child: const Text('Image unavailable'),
+                            ),
+                      ),
                     ),
-                  ],
-                ),
+                  )
+                else
+                  Text(
+                    'Leaf image unavailable',
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+              ],
+              if (message.contentType == MessageContentType.image &&
+                  message.textContent?.trim().isNotEmpty == true)
+                Text(message.textContent!.trim()),
               if (message.contentType == MessageContentType.text &&
                   (message.textContent?.trim().isNotEmpty ?? false))
                 Text(message.textContent!.trim()),
@@ -90,6 +113,48 @@ class MessageBubble extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+
+  void _showImagePreview(BuildContext context, String imagePath) {
+    showDialog<void>(
+      context: context,
+      barrierColor: Colors.black,
+      builder:
+          (context) => Dialog.fullscreen(
+            backgroundColor: Colors.black,
+            child: SafeArea(
+              child: Column(
+                children: [
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: IconButton(
+                      tooltip: 'Close image',
+                      color: Colors.white,
+                      onPressed: () => Navigator.pop(context),
+                      icon: const Icon(SolarIconsOutline.closeCircle),
+                    ),
+                  ),
+                  Expanded(
+                    child: InteractiveViewer(
+                      child: Center(
+                        child: Image.file(
+                          File(imagePath),
+                          fit: BoxFit.contain,
+                          errorBuilder:
+                              (context, error, stackTrace) => const Text(
+                                'Image unavailable',
+                                style: TextStyle(color: Colors.white),
+                              ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: AppConstants.paddingLarge),
+                ],
+              ),
+            ),
+          ),
     );
   }
 }

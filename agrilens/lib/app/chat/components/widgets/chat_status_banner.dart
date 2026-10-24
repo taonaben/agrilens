@@ -13,15 +13,36 @@ class ChatStatusBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      color: Theme.of(
-        context,
-      ).colorScheme.errorContainer.withValues(alpha: opacity),
-      padding: const EdgeInsets.all(AppConstants.paddingMedium),
-      child: Text(
-        message,
-        style: TextStyle(color: Theme.of(context).colorScheme.onErrorContainer),
+    final colors = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppConstants.paddingMedium,
+        vertical: AppConstants.gapXSmall,
+      ),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppConstants.paddingSmall,
+          vertical: AppConstants.gapXSmall,
+        ),
+        decoration: BoxDecoration(
+          color: colors.errorContainer.withValues(alpha: opacity),
+          borderRadius: BorderRadius.circular(AppConstants.borderRadiusMedium),
+        ),
+        child: Row(
+          children: [
+            Icon(Icons.info_outline, size: 18, color: colors.onErrorContainer),
+            const SizedBox(width: AppConstants.gapSmall),
+            Expanded(
+              child: Text(
+                message,
+                maxLines: 3,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(color: colors.onErrorContainer),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

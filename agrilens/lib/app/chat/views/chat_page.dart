@@ -15,6 +15,7 @@ import 'package:agrilens/app/chat/services/pipeline_result.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:solar_icons/solar_icons.dart';
 
 class ChatPage extends StatefulWidget {
   const ChatPage({
@@ -136,6 +137,30 @@ class _ChatPageState extends State<ChatPage> {
       _pendingImagePath = file.path;
       _inlineError = null;
     });
+  }
+
+  Future<void> _replacePendingImage() async {
+    final source = await showModalBottomSheet<ImageSource>(
+      context: context,
+      builder:
+          (context) => SafeArea(
+            child: Wrap(
+              children: [
+                ListTile(
+                  leading: const Icon(SolarIconsOutline.camera),
+                  title: const Text('Take a photo'),
+                  onTap: () => Navigator.pop(context, ImageSource.camera),
+                ),
+                ListTile(
+                  leading: const Icon(SolarIconsOutline.gallery),
+                  title: const Text('Choose from gallery'),
+                  onTap: () => Navigator.pop(context, ImageSource.gallery),
+                ),
+              ],
+            ),
+          ),
+    );
+    if (source != null) await _selectImage(source);
   }
 
   Future<bool> _ensurePermission(ImageSource source) async {
@@ -306,19 +331,6 @@ class _ChatPageState extends State<ChatPage> {
         ),
         if (widget.serviceWarning != null)
           ChatStatusBanner(message: widget.serviceWarning!, opacity: 0.4),
-        if (_inlineError != null)
-          ChatStatusBanner(message: _inlineError!, opacity: 0.35),
-        if (_pendingImagePath != null)
-          PendingImagePreviewCard(
-            imagePath: _pendingImagePath!,
-            isBusy: _busy,
-            onClearTap: () {
-              setState(() {
-                _pendingImagePath = null;
-              });
-            },
-          ),
-        if (_busyLabel != null) ChatBusyIndicator(label: _busyLabel!),
         Expanded(
           child: ChatMessageList(
             isLoading: _loadingConversation,
@@ -326,10 +338,22 @@ class _ChatPageState extends State<ChatPage> {
             predictionsByMessageId: _predictionsByMessageId,
           ),
         ),
+        if (_busyLabel != null) ChatBusyIndicator(label: _busyLabel!),
+        if (_inlineError != null)
+          ChatStatusBanner(message: _inlineError!, opacity: 0.35),
         ChatComposer(
           controller: _messageController,
           isBusy: _busy,
           hasPendingImage: _pendingImagePath != null,
+          attachmentPreview:
+              _pendingImagePath == null
+                  ? null
+                  : PendingImagePreviewCard(
+                    imagePath: _pendingImagePath!,
+                    isBusy: _busy,
+                    onClearTap: () => setState(() => _pendingImagePath = null),
+                    onReplaceTap: _replacePendingImage,
+                  ),
           onCameraTap: () => _selectImage(ImageSource.camera),
           onGalleryTap: () => _selectImage(ImageSource.gallery),
           onSend: _handleSendPressed,

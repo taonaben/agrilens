@@ -1,4 +1,3 @@
-import 'package:agrilens/shared/theme/app_colors.dart';
 import 'package:agrilens/shared/utils/app_constants.dart';
 import 'package:flutter/material.dart';
 import 'package:solar_icons/solar_icons.dart';
@@ -21,35 +20,31 @@ class ChatActionBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final brightness = Theme.of(context).brightness;
-
-    return Container(
-      padding: const EdgeInsets.all(AppConstants.paddingMedium),
-      decoration: BoxDecoration(
-        color: AppColors.surface(brightness),
-        border: Border(bottom: BorderSide(color: AppColors.border(brightness))),
+    return Padding(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppConstants.paddingSmall,
+        vertical: AppConstants.gapXSmall,
       ),
-      child: Wrap(
-        spacing: AppConstants.gapSmall,
-        runSpacing: AppConstants.gapSmall,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.end,
         children: [
-          OutlinedButton.icon(
-            onPressed: isBusy ? null : onNewChatTap,
-            icon: const Icon(SolarIconsOutline.addCircle),
-            label: const Text('New chat'),
-          ),
           if (showRetryAction)
-            OutlinedButton.icon(
+            IconButton(
               onPressed: isBusy ? null : onRetryTap,
+              tooltip: 'Retry response',
               icon: const Icon(SolarIconsOutline.refresh),
-              label: const Text('Retry response'),
             ),
           if (isBusy)
-            OutlinedButton.icon(
+            IconButton(
               onPressed: onCancelTap,
+              tooltip: 'Cancel generation',
               icon: const Icon(SolarIconsOutline.closeCircle),
-              label: const Text('Cancel'),
             ),
+          IconButton(
+            onPressed: isBusy ? null : onNewChatTap,
+            tooltip: 'New chat',
+            icon: const Icon(SolarIconsOutline.addCircle),
+          ),
         ],
       ),
     );
