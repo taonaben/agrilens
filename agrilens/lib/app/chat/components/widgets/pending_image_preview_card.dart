@@ -11,14 +11,12 @@ class PendingImagePreviewCard extends StatelessWidget {
     super.key,
     required this.imagePath,
     required this.isBusy,
-    required this.onAnalyzeTap,
-    required this.onRetakeTap,
+    required this.onClearTap,
   });
 
   final String imagePath;
   final bool isBusy;
-  final VoidCallback onAnalyzeTap;
-  final VoidCallback onRetakeTap;
+  final VoidCallback onClearTap;
 
   @override
   Widget build(BuildContext context) {
@@ -37,7 +35,7 @@ class PendingImagePreviewCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Selected image preview',
+            'Image ready to send',
             style: Theme.of(
               context,
             ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
@@ -62,14 +60,10 @@ class PendingImagePreviewCard extends StatelessWidget {
           Wrap(
             spacing: AppConstants.gapSmall,
             children: [
-              FilledButton.icon(
-                onPressed: isBusy ? null : onAnalyzeTap,
-                icon: const Icon(SolarIconsOutline.checkCircle),
-                label: const Text('Analyze image'),
-              ),
-              OutlinedButton(
-                onPressed: isBusy ? null : onRetakeTap,
-                child: const Text('Retake'),
+              OutlinedButton.icon(
+                onPressed: isBusy ? null : onClearTap,
+                icon: const Icon(SolarIconsOutline.trashBinTrash),
+                label: const Text('Remove image'),
               ),
             ],
           ),

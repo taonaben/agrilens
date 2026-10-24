@@ -238,6 +238,15 @@ class _ChatPageState extends State<ChatPage> {
     });
   }
 
+  Future<void> _handleSendPressed() async {
+    if (_busy) return;
+    if (_pendingImagePath != null) {
+      await _analyzeImage();
+      return;
+    }
+    await _sendFollowUp();
+  }
+
   Future<void> _retryAssistant() async {
     setState(() {
       _busy = true;
@@ -285,8 +294,6 @@ class _ChatPageState extends State<ChatPage> {
         ChatActionBar(
           isBusy: _busy,
           showRetryAction: _hasFailedAssistantMessage,
-          onCameraTap: () => _selectImage(ImageSource.camera),
-          onGalleryTap: () => _selectImage(ImageSource.gallery),
           onNewChatTap: _newConversation,
           onRetryTap: _retryAssistant,
           onCancelTap: () {
@@ -305,8 +312,7 @@ class _ChatPageState extends State<ChatPage> {
           PendingImagePreviewCard(
             imagePath: _pendingImagePath!,
             isBusy: _busy,
-            onAnalyzeTap: _analyzeImage,
-            onRetakeTap: () {
+            onClearTap: () {
               setState(() {
                 _pendingImagePath = null;
               });
@@ -323,7 +329,10 @@ class _ChatPageState extends State<ChatPage> {
         ChatComposer(
           controller: _messageController,
           isBusy: _busy,
-          onSend: _sendFollowUp,
+          hasPendingImage: _pendingImagePath != null,
+          onCameraTap: () => _selectImage(ImageSource.camera),
+          onGalleryTap: () => _selectImage(ImageSource.gallery),
+          onSend: _handleSendPressed,
         ),
       ],
     );

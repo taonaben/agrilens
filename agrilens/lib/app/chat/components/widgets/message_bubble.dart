@@ -3,10 +3,12 @@ import 'dart:io';
 import 'package:agrilens/app/chat/components/widgets/prediction_card.dart';
 import 'package:agrilens/app/chat/models/message.dart';
 import 'package:agrilens/app/chat/models/prediction.dart';
+import 'package:agrilens/shared/components/custom_progress_indicator.dart';
 import 'package:agrilens/shared/theme/app_colors.dart';
 import 'package:agrilens/shared/utils/app_constants.dart';
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
+import 'package:solar_icons/solar_icons.dart';
 
 class MessageBubble extends StatelessWidget {
   const MessageBubble({super.key, required this.message, this.prediction});
@@ -42,23 +44,18 @@ class MessageBubble extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              if (message.contentType == MessageContentType.image &&
-                  message.localImagePath != null)
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(
-                    AppConstants.borderRadiusMedium,
-                  ),
-                  child: Image.file(
-                    File(message.localImagePath!),
-                    fit: BoxFit.cover,
-                    errorBuilder:
-                        (context, error, stackTrace) => Container(
-                          height: 120,
-                          color: AppColors.surfaceAlt(brightness),
-                          alignment: Alignment.center,
-                          child: const Text('Image unavailable'),
-                        ),
-                  ),
+              if (message.contentType == MessageContentType.image)
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(SolarIconsOutline.gallery, size: 18),
+                    const Gap(AppConstants.gapXSmall),
+                    Text(
+                      File(message.localImagePath ?? '').existsSync()
+                          ? 'Leaf image attached'
+                          : 'Leaf image unavailable',
+                    ),
+                  ],
                 ),
               if (message.contentType == MessageContentType.text &&
                   (message.textContent?.trim().isNotEmpty ?? false))
@@ -72,11 +69,7 @@ class MessageBubble extends StatelessWidget {
                 const Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    SizedBox(
-                      width: 14,
-                      height: 14,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    ),
+                    CustomProgressIndicator(size: 18),
                     Gap(8),
                     Text('Processing...'),
                   ],

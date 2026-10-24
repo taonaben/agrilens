@@ -8,8 +8,6 @@ class ChatActionBar extends StatelessWidget {
     super.key,
     required this.isBusy,
     required this.showRetryAction,
-    required this.onCameraTap,
-    required this.onGalleryTap,
     required this.onNewChatTap,
     required this.onRetryTap,
     required this.onCancelTap,
@@ -17,8 +15,6 @@ class ChatActionBar extends StatelessWidget {
 
   final bool isBusy;
   final bool showRetryAction;
-  final VoidCallback onCameraTap;
-  final VoidCallback onGalleryTap;
   final VoidCallback onNewChatTap;
   final VoidCallback onRetryTap;
   final VoidCallback onCancelTap;
@@ -37,16 +33,6 @@ class ChatActionBar extends StatelessWidget {
         spacing: AppConstants.gapSmall,
         runSpacing: AppConstants.gapSmall,
         children: [
-          FilledButton.icon(
-            onPressed: isBusy ? null : onCameraTap,
-            icon: const Icon(SolarIconsOutline.camera),
-            label: const Text('Camera'),
-          ),
-          FilledButton.icon(
-            onPressed: isBusy ? null : onGalleryTap,
-            icon: const Icon(SolarIconsOutline.gallery),
-            label: const Text('Gallery'),
-          ),
           OutlinedButton.icon(
             onPressed: isBusy ? null : onNewChatTap,
             icon: const Icon(SolarIconsOutline.addCircle),

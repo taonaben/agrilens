@@ -195,6 +195,14 @@ class _AppState extends State<App> {
     if (mounted) setState(() {});
   }
 
+  Future<void> _handleSidebarNewChat({required bool isDrawer}) async {
+    if (_initializing) return;
+    await _createAndSelectConversation();
+    if (isDrawer && mounted) {
+      Navigator.of(context).pop();
+    }
+  }
+
   Widget _buildMainContent({
     required int selectedIndex,
     required String pageLabel,
@@ -366,15 +374,27 @@ class _AppState extends State<App> {
       headerBuilder:
           (context, extended) => Padding(
             padding: const EdgeInsets.fromLTRB(26, 12, 16, 32),
-            child: Align(
-              alignment: Alignment.centerLeft,
-              child: Text(
-                'AgriLens',
-                style: theme.textTheme.titleLarge?.copyWith(
-                  color: primary,
-                  fontWeight: FontWeight.bold,
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    'AgriLens',
+                    style: theme.textTheme.titleLarge?.copyWith(
+                      color: primary,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                 ),
-              ),
+                IconButton(
+                  tooltip: 'New chat',
+                  onPressed:
+                      _initializing
+                          ? null
+                          : () => _handleSidebarNewChat(isDrawer: isDrawer),
+                  icon: const Icon(SolarIconsOutline.addCircle),
+                  color: primary,
+                ),
+              ],
             ),
           ),
       items: [
