@@ -1,0 +1,18 @@
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: agrilens-api:local
+    env_file:
+      - .env
+    environment:
+      AGRILENS_MODEL_PATH: /models/agrilens_model.tflite
+      AGRILENS_ARTIFACTS_DIR: /models/artifacts
+      WEB_CONCURRENCY: ${WEB_CONCURRENCY:-1}
+    ports:
+      - "${AGRILENS_API_PORT:-8000}:8000"
+    volumes:
+      - ../agrilens/assets/models/agrilens_model.tflite:/models/agrilens_model.tflite:ro
+      - ../agrilens-training/artifacts:/models/artifacts:ro
+    restart: unless-stopped

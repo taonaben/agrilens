@@ -4,7 +4,28 @@ Build from the foundation up. The first Chat screen must use real saved records 
 
 Status: `[ ]` pending; `[x]` implemented and verified. Keep a phase pending when its asset exists but its behavior has not been exercised.
 
-## Tonight's target
+## Owner-approved architecture update (24 October 2026)
+
+The owner selected server-side predictions, hosted Gemini behind FastAPI, Supabase email/password Auth, Supabase Postgres history storage, and private Supabase Storage for original photos, all accessed through FastAPI. Drift remains the local history store. Synced photos are retained until conversation deletion. Flutter must not access Supabase database or storage APIs directly. This supersedes the earlier local-model release choice below. Existing local model and pipeline work remains useful for contract reference and rollback, but is not the selected runtime path.
+
+### Migration sequence
+
+1. [ ] Define a versioned HTTPS contract for diagnosis and follow-up responses using the exact nine-class order and current preprocessing/rejection artifacts.
+2. [ ] Add a FastAPI service that loads the TFLite artifact, preprocesses images, applies available rejection checks, and calls Gemini only from the server. The Gemini key must never enter the Flutter app.
+3. [ ] Add Supabase Auth token validation and ownership checks to protected endpoints. Persist original photos only as part of the authenticated conversation-history sync contract.
+4. [ ] Replace the Flutter runtime model services with HTTPS implementations behind the existing service interfaces. Keep Drift local history usable offline and show network failures as retryable states.
+5. [ ] Apply the Supabase Postgres schema and private Storage policies in `../backend/supabase/schema.sql`; FastAPI remains the client-facing API and uses the Supabase user token for owner-scoped access.
+6. [ ] Define and implement authenticated snapshot sync, conflict handling, offline deletion tombstones, and photo upload/download/deletion through FastAPI. Keep local IDs stable and sync states explicit so failed work can resume safely.
+
+### Migration gate
+
+A photo reaches FastAPI over HTTPS, the service returns a typed prediction in trained class order and a bounded Gemini explanation, and Flutter persists both in Drift. Cross-device sync must preserve original photos and delete remote objects with their conversation.
+
+## Original local implementation plan
+
+The phases below describe the work completed under the previous local-first direction. Do not treat local model execution or airplane-mode diagnosis as the current release target.
+
+## Historical local target
 
 A **working local spine**: create a conversation in a database, select an image, run the bundled classifier, store the result, pass that result to the conversational model, save its response, and render the saved exchange in Chat. If device or model compatibility blocks a step, leave a visible error state and record the exact blocker; do not substitute fabricated output.
 
@@ -63,13 +84,12 @@ The database for this first pass is **on-device Drift/SQLite**, matching the off
 **Gate:** a user can take or choose a photo, receive a real prediction and model response, leave the screen, and return to the saved conversation. No sample results appear in production.
 **Partial:** Desktop/static verification is complete for shell integration and pipeline-backed chat behavior. Real device verification (mobile + airplane mode) remains pending.
 
-## After tonight: quality and release work
+## Quality and release work
 
 - [ ] Create and review a versioned disease-guidance catalog with agricultural sources and regional wording. Keep chemical guidance out until approved.
 - [ ] Build labeled field and unsupported-input evaluation sets; measure per-class performance and rejection behavior. The current 15-photo probe has no ground truth and the unsupported probe is empty.
-- [ ] Record Android latency, memory, package size, supported devices, and model loading behavior. Agree on release thresholds from those measurements.
-- [ ] Decide whether Supabase/FastAPI, auth, sync, Weather, and Store belong in the next release; specify contracts before implementation.
+- [ ] Record server round-trip latency, backend inference time, Gemini response time, request limits, supported devices, and release thresholds.
 
 ## Work allocation
 
-Other coding agents can take bounded tasks such as Drift schema/repository, model tensor inspection, Flutter inference adapter, Chat components, and focused tests. The project owner reviews the schema contract, rejection behavior, LLM delivery choice, agricultural content, privacy, and release criteria. Each handoff must show real output or a precise blocker, the files changed, and the validation performed.
+Bounded tasks include FastAPI inference, Gemini integration, Supabase Auth verification, Flutter HTTPS adapters, and Drift synchronization. The project owner reviews the schema contract, rejection behavior, remote storage and retention, agricultural content, privacy, and release criteria. Each handoff must show real output or a precise blocker, the files changed, and the validation performed.

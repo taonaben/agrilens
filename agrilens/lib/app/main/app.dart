@@ -4,15 +4,18 @@ import 'package:agrilens/app/chat/data/message_repository.dart';
 import 'package:agrilens/app/chat/data/prediction_repository.dart';
 import 'package:agrilens/app/chat/models/conversation.dart' as model;
 import 'package:agrilens/app/chat/services/diagnosis_pipeline.dart';
-import 'package:agrilens/app/chat/services/diagnosis_service.dart';
-import 'package:agrilens/app/chat/services/local_llm_service.dart';
+import 'package:agrilens/app/chat/services/backend_api_client.dart';
+import 'package:agrilens/app/chat/services/backend_diagnosis_service.dart';
+import 'package:agrilens/app/chat/services/backend_llm_service.dart';
 import 'package:agrilens/app/chat/views/chat_page.dart';
 import 'package:agrilens/shared/theme/app_colors.dart';
 import 'package:agrilens/shared/utils/app_constants.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:gap/gap.dart';
 import 'package:sidebarx/sidebarx.dart';
 import 'package:solar_icons/solar_icons.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class _Destination {
   const _Destination({
@@ -64,8 +67,8 @@ class _AppState extends State<App> {
   late final ConversationRepository _conversationRepo;
   late final MessageRepository _messageRepo;
   late final PredictionRepository _predictionRepo;
-  late final DiagnosisService _diagnosisService;
-  late final LocalLlmService _llmService;
+  late final BackendDiagnosisService _diagnosisService;
+  late final BackendLlmService _llmService;
   late final DiagnosisPipeline _pipeline;
 
   bool _initializing = true;
@@ -82,8 +85,13 @@ class _AppState extends State<App> {
     _conversationRepo = ConversationRepository(_database);
     _messageRepo = MessageRepository(_database);
     _predictionRepo = PredictionRepository(_database);
-    _diagnosisService = DiagnosisService();
-    _llmService = LocalLlmService();
+    final api = BackendApiClient(
+      accessTokenProvider:
+          () async => Supabase.instance.client.auth.currentSession?.accessToken,
+      baseUrl: dotenv.env['AGRILENS_API_BASE_URL'],
+    );
+    _diagnosisService = BackendDiagnosisService(api);
+    _llmService = BackendLlmService(api);
     _pipeline = DiagnosisPipeline(
       diagnosisService: _diagnosisService,
       llmService: _llmService,
@@ -113,9 +121,9 @@ class _AppState extends State<App> {
     try {
       await _diagnosisService.load();
       await _llmService.load();
-      if (!_llmService.isReady && _llmService.lastError != null) {
+      if (!_diagnosisService.isConfigured) {
         _serviceWarning =
-            'Local conversation model is not ready yet: ${_llmService.lastError}';
+            'The FastAPI server URL is missing or must use HTTPS. Configure AGRILENS_API_BASE_URL.';
       }
 
       await _reloadConversations();
@@ -253,6 +261,34 @@ class _AppState extends State<App> {
         onCreateConversation: _createAndSelectConversation,
         onConversationChanged: _reloadConversations,
         serviceWarning: _serviceWarning,
+      );
+    }
+
+    if (pageLabel == 'Settings page') {
+      return Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 420),
+          child: Padding(
+            padding: const EdgeInsets.all(AppConstants.paddingLarge),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Account',
+                  style: Theme.of(context).textTheme.headlineSmall,
+                ),
+                const SizedBox(height: 8),
+                Text(Supabase.instance.client.auth.currentUser?.email ?? ''),
+                const SizedBox(height: 20),
+                FilledButton(
+                  onPressed: () => Supabase.instance.client.auth.signOut(),
+                  child: const Text('Sign out'),
+                ),
+              ],
+            ),
+          ),
+        ),
       );
     }
 
