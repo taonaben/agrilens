@@ -26,7 +26,20 @@ The deployed service must be given `agrilens_model.tflite` and the three version
 - `POST /v1/diagnoses`: multipart `image` upload; returns the typed prediction and score evidence.
 - `POST /v1/answers`: JSON classifier evidence plus recent turns and optional follow-up; returns `{ "answer": ... }`.
 
-Authenticated requests use `Authorization: Bearer <Supabase access token>`. The backend verifies the token with Supabase Auth. Apply `supabase/schema.sql` in the Supabase SQL editor to provision owner-scoped tables, RLS policies, deletion tombstones, and the private photo bucket. Flutter must call FastAPI only. History endpoints, sync conflict behavior, photo upload/download, and remote deletion are not implemented yet; the SQL file is the approved storage foundation, not a functioning sync service.
+Authenticated requests use `Authorization: Bearer <Supabase access token>`. The backend verifies the token with Supabase Auth. Apply `supabase/schema.sql` in the Supabase SQL editor to provision owner-scoped history, shop tables, RLS policies, and the private photo bucket. Flutter must call FastAPI only.
+
+### Shop API
+
+- `POST /v1/history/sync`: authenticated upsert of conversations, messages, and predictions. The server assigns the authenticated owner ID; message and prediction references are checked against that owner's saved records.
+- `GET /v1/products`: authenticated list of active products.
+- `POST /v1/products`: add a product using the `X-Shop-Admin-Token` header. Include optional `image_url` to download a product image into Supabase Storage.
+- `DELETE /v1/products/{product_id}`: deactivate a product using the operator token. Existing order snapshots remain intact.
+- `POST /v1/products/import`: import CSV using the operator token. Headers are `sku,name,description,price,currency,stock_quantity,crops,conditions`; separate crop and condition tags with `|`. An optional `image_url` column supplies an image per row. Existing SKUs are updated by import.
+- `GET /v1/recommendations`: products matched to the authenticated user's scans and explicit crop or condition mentions in saved user messages, with a reason for each match.
+- `POST /v1/orders`: create an order with `items` (`product_id`, `quantity`), `contact_name`, `phone`, and `delivery_address`. Stock is reserved transactionally. Orders containing multiple currencies are rejected.
+- `GET /v1/orders`: list the authenticated user's orders with item snapshots.
+
+Set `SUPABASE_SERVICE_ROLE_KEY` and a long random `SHOP_ADMIN_TOKEN` on the backend to enable catalog management. Keep both server-side; clients receive neither secret. Product images must be publicly reachable HTTPS JPEG, PNG, or WebP files under 5 MB. FastAPI validates the resolved host and redirects, uploads the original bytes to the public `agrilens-products` bucket, and stores the object path on the product. The shop image bucket is separate from private chat photos. Orders do not collect payment. `POST /v1/history/sync` supports record upserts; photo transfer and remote deletion are still separate work.
 
 ## Contract limits
 

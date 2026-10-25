@@ -1,0 +1,60 @@
+# AgriLens product import sources
+
+Retrieved 25 October 2026 from Seeds for Africa, South Africa.
+
+The import CSV contains exactly the nine endpoint headers. Prices are supplier-listed variant prices in ZAR, not USD or Zimbabwe supplier quotations. Stock quantities are invented demo data. Internal AGL SKUs are newly assigned, so repeated imports update these records. Descriptions are original catalogue summaries. Conditions are blank because no reviewed disease-to-product mapping was established. Crop tags are inferred from seed product names; non-seed supplies have blank crop tags to avoid claiming unsupported suitability.
+
+Images are supplier-hosted URLs; check permission before using them in a public commercial shop. URLs can change. Product imagery may show crops rather than packaging. No import has been performed.
+
+| SKU | Category | Product | Source |
+|---|---|---|---|
+| AGL-0001 | Seeds | Moneymaker Tomato - ORGANIC - Heirloom Vegetable - 10 Seeds | [Product listing](https://www.seedsforafrica.co.za/products/moneymaker-tomato-organic-heirloom-vegetable-10-seeds) |
+| AGL-0002 | Seeds | Marmande Tomato - ORGANIC - Heirloom Vegetable - 20 Seeds | [Product listing](https://www.seedsforafrica.co.za/products/marmande-tomato-organic-heirloom-vegetable-20-seeds) |
+| AGL-0003 | Seeds | Caramelo F1 Sweetcorn - Heirloom Vegetable - 10 Seeds | [Product listing](https://www.seedsforafrica.co.za/products/caramelo-f1-sweetcorn-heirloom-vegetable-10-seeds) |
+| AGL-0004 | Seeds | Yellow Popcorn - Heirloom Vegetable - 25 Seeds | [Product listing](https://www.seedsforafrica.co.za/products/yellow-popcorn-heirloom-vegetable-25-seeds) |
+| AGL-0005 | Seeds | Detroit Dark Red Beetroot - ORGANIC - Heirloom Vegetable - 100 Seeds | [Product listing](https://www.seedsforafrica.co.za/products/detroit-dark-red-beetroot-organic-heirloom-vegetable-100-seeds) |
+| AGL-0006 | Seeds | Granaat Chinese Cabbage - ORGANIC - Heirloom Vegetable - 20 Seeds | [Product listing](https://www.seedsforafrica.co.za/products/granaat-chinese-cabbage-organic-heirloom-vegetable-50-seeds) |
+| AGL-0007 | Seeds | Brunswick Cabbage - Heirloom Vegetable - Brassica oleracea - 100 Seeds | [Product listing](https://www.seedsforafrica.co.za/products/brunswick-cabbage-heirloom-vegetable-brassica-oleracea-100-seeds) |
+| AGL-0008 | Seeds | Karoo Chantenay Carrot - Daucus Carrota - Vegetable - 100 Seeds | [Product listing](https://www.seedsforafrica.co.za/products/karoo-chantenay-carrot-daucus-carrota-vegetable-100-seeds) |
+| AGL-0009 | Seeds | Ashley Cucumber - Cucumis Sativus - 40 Seeds | [Product listing](https://www.seedsforafrica.co.za/products/ashley-cucumber-cucumis-sativus-40-seeds) |
+| AGL-0010 | Seeds | Great Lakes Lettuce - Lactuca sativa - Organic Heirloom Vegetable - 100 seeds | [Product listing](https://www.seedsforafrica.co.za/products/great-lakes-lettuce-lactuca-sativa-organic-heirloom-vegetable-100-seeds) |
+| AGL-0011 | Seeds | Queensland Blue Pumpkin - ORGANIC - Heirloom Vegetable - 5 Seeds | [Product listing](https://www.seedsforafrica.co.za/products/queensland-blue-pumpkin-organic-heirloom-vegetable-5-seeds) |
+| AGL-0012 | Seeds | Butternut Squash - Cucurbita Moschata - 15 Seeds | [Product listing](https://www.seedsforafrica.co.za/products/butternut-squash-cucurbita-moschata-15-seeds) |
+| AGL-0013 | Seeds | Rolet Gem Squash - Cucurbita Pepo - 40 Seeds | [Product listing](https://www.seedsforafrica.co.za/products/rolet-gem-squash-cucurbita-pepo-40-seeds) |
+| AGL-0014 | Seeds | Bolero Shelling Green Peas - Pisum Sativum - Vegetable - 25 Seeds | [Product listing](https://www.seedsforafrica.co.za/products/bolero-shelling-green-peas-pisum-sativum-vegetable-25-seeds) |
+| AGL-0015 | Seeds | Chinese / Thai Green Yard Long Beans - Heirloom Vegetable - Vigna sesquipedalis - 5 Seeds | [Product listing](https://www.seedsforafrica.co.za/products/yard-long-beans-heirloom-vegetable-vigna-sesquipedalis-5-seeds) |
+| AGL-0016 | Seeds | Sugar Baby Watermelon - ORGANIC - Citrullus Lanatus - Vegetable / Fruit - 20 Seeds | [Product listing](https://www.seedsforafrica.co.za/products/sugar-baby-watermelon-organic-citrullus-lanatus-vegetable-fruit-20-seeds) |
+| AGL-0017 | Seeds | Green Sprouting Calabrese Broccoli - ORGANIC - Heirloom Vegetable - 200 Seeds | [Product listing](https://www.seedsforafrica.co.za/products/green-sprouting-calabrese-broccoli-organic-heirloom-vegetable-200-seeds) |
+| AGL-0018 | Seeds | Snowball Cauliflower - ORGANIC - Heirloom Vegetable - 100 Seeds | [Product listing](https://www.seedsforafrica.co.za/products/snowball-cauliflower-organic-heirloom-vegetable-100-seeds) |
+| AGL-0019 | Seeds | Black Tuscan Palm Kale - Lacinato Kale - Heirloom Vegetable - Brassica oleracea 'Lacinato' - 10 Seeds | [Product listing](https://www.seedsforafrica.co.za/products/black-tuscan-palm-kale-lacinato-kale-heirloom-vegetable-brassica-oleracea-lacinato-10-seeds) |
+| AGL-0020 | Seeds | Clemson Spineless Okra - ORGANIC - Heirloom Vegetable - 50 Seeds | [Product listing](https://www.seedsforafrica.co.za/products/clemson-spineless-okra-organic-heirloom-vegetable-50-seeds) |
+| AGL-0021 | Seeds | Cherry Belle Radish - ORGANIC - Heirloom Vegetable - 100 Seeds | [Product listing](https://www.seedsforafrica.co.za/products/cherry-belle-radish-organic-heirloom-vegetable-100-seeds) |
+| AGL-0022 | Seeds | Carentan Leek - Allium ampelloprasum - French Heirloom Vegetable - 200 Seeds | [Product listing](https://www.seedsforafrica.co.za/products/carentan-leek-allium-ampelloprasum-french-heirloom-vegetable-200-seeds) |
+| AGL-0023 | Seeds | Red Creole Onion - Allium Cepa - Vegetable - 100 Seeds | [Product listing](https://www.seedsforafrica.co.za/products/red-creole-onion-allium-cepa-vegetable-100-seeds) |
+| AGL-0024 | Seeds | Long Cayenne Chilli Pepper - ORGANIC - Heirloom Vegetable - 20 Seeds | [Product listing](https://www.seedsforafrica.co.za/products/long-cayenne-chilli-pepper-organic-heirloom-vegetable-20-seeds) |
+| AGL-0025 | Seeds | Mary Washington Asparagus - Asparagus officinalis - Organic Heirloom Vegetable - 5 seeds | [Product listing](https://www.seedsforafrica.co.za/products/mary-washington-asparagus-asparagus-officinalis-organic-heirloom-vegetable-5-seeds) |
+| AGL-0026 | nutrients-fertilizer | Fertilis - Worm Castings - Natural Organic Fertilizer — 5dm (5 liters) | [Product listing](https://www.seedsforafrica.co.za/products/fertilis-worm-castings-natural-organic-fertilizer) |
+| AGL-0027 | nutrients-fertilizer | Talborne Organics - Seedling Food - Vegetables, Herbs & Flower Seedlings Organic Fertilizer - 1kg | [Product listing](https://www.seedsforafrica.co.za/products/talborne-organics-seedling-food-vegetables-herbs-flower-seedlings-organic-fertilizer-1kg) |
+| AGL-0028 | nutrients-fertilizer | Talborne Organics - Vita Veg 6:3:4 (16) Vegetables, Herbs & Berries Organic Fertilizer — 500 grams | [Product listing](https://www.seedsforafrica.co.za/products/talborne-organics-vita-veg-6-3-4-16-vegetables-herbs-berries-organic-fertilizer) |
+| AGL-0029 | nutrients-fertilizer | Biogrow Biotrissol - Organic Foliar Feed - Fertiliser - 500 mls | [Product listing](https://www.seedsforafrica.co.za/products/biogrow-biotrissol-organic-foliar-feed-fertiliser-500-mls) |
+| AGL-0030 | nutrients-fertilizer | Talborne Organics - Vita Fruit & Flower 3:1:5 (18) Flowering, Fruit & Container Organic Fertilizer — 500 grams | [Product listing](https://www.seedsforafrica.co.za/products/talborne-organics-vita-fruit-flower-3-1-5-18-flowering-fruit-container-organic-fertilizer) |
+| AGL-0031 | nutrients-fertilizer | Talborne Organics - Vita Grow 2:3:2 (16) General Organic Fertilizer — 500 grams | [Product listing](https://www.seedsforafrica.co.za/products/talborne-organics-vita-grow-2-3-2-16-general-organic-fertilizer) |
+| AGL-0032 | nutrients-fertilizer | Talborne Organics - Vita Bone Phos - Trees, Shrubs & Root Vegetables Organic Fertilizer — 2kg | [Product listing](https://www.seedsforafrica.co.za/products/talborne-organics-vita-bone-phos-trees-shrubs-root-vegetables-organic-fertilizer) |
+| AGL-0033 | nutrients-fertilizer | Margaret Roberts Organic Super Charger 500ML - Hydroponic & Soil Nutrients / Fertilizer | [Product listing](https://www.seedsforafrica.co.za/products/margaret-roberts-organic-super-charger-fertiliser-500ml-makes-up-to-150-litres) |
+| AGL-0034 | nutrients-fertilizer | Talborne Organics - Vita Green 5:1:5 (16) Lawns, Palms & Tropical Gardens Organic Fertilizer — 2kg | [Product listing](https://www.seedsforafrica.co.za/products/talborne-organics-vita-green-5-1-5-16-lawns-palms-tropical-gardens-organic-fertilizer) |
+| AGL-0035 | nutrients-fertilizer | Talborne Nourish Buds, Flowers & Fruit 4:1:6 - Organic Soil / Hydroponic Nutrients — Talborne Nourish Buds, Flowers & Fruit - 500ml | [Product listing](https://www.seedsforafrica.co.za/products/talborne-nourish-buds-flowers-fruit-4-1-6-organic-soil-hydroponic-nutrients) |
+| AGL-0036 | propagation | White plastic T plant marker | [Product listing](https://www.seedsforafrica.co.za/products/25-pack-white-plastic-plant-markers-t-shaped) |
+| AGL-0037 | propagation | Jiffy 7 Peat Pellets 42mm - Seed Starting pellets — 10 Jiffy 7 Peat Pellets | [Product listing](https://www.seedsforafrica.co.za/products/jiffy-7-peat-pellets-42mm-seed-starting-pellets) |
+| AGL-0038 | propagation | 5 Pack - 20 cell polystyrene seed trays | [Product listing](https://www.seedsforafrica.co.za/products/5-pack-20-cell-polystyrene-seed-trays) |
+| AGL-0039 | propagation | 5 Pack - 6 Cell Black Plastic Reuseable Seed Trays | [Product listing](https://www.seedsforafrica.co.za/products/5-pack-6-cell-black-plastic-reuseable-seed-trays) |
+| AGL-0040 | propagation | 5 Pack - 12 Cell Polystyrene Seed Trays | [Product listing](https://www.seedsforafrica.co.za/products/5-pack-12-cell-polystyrene-seed-trays) |
+| AGL-0041 | propagation | 3cm Flat Black Plastic Reuseable Seed Tray / Microgreen Trays 53cm x 27cm x 3cm — 3cm Microgreen Tray with drainage holes - 1 Tray | [Product listing](https://www.seedsforafrica.co.za/products/flat-black-plastic-reuseable-seed-tray-microgreen-tray-53cm-x-27cm-x-3cm) |
+| AGL-0042 | propagation | 50 Pack - 0.75 Litre 100% Virgin Plastic Growing Bags | [Product listing](https://www.seedsforafrica.co.za/products/50-pack-0-75-litre-100-virgin-plastic-growing-bags) |
+| AGL-0043 | propagation | 3 Pack - Flat Black Plastic Reuseable Seed Trays — Pack of 3 Trays 15cm x 20cm x 6cm | [Product listing](https://www.seedsforafrica.co.za/products/3-pack-flat-black-plastic-reuseable-seed-trays) |
+| AGL-0044 | growing-mediums | Sphagnum Peat Moss — 1 Litre | [Product listing](https://www.seedsforafrica.co.za/products/sphagnum-peat-moss) |
+| AGL-0045 | growing-mediums | Horticultural Perlite — 1 Litre | [Product listing](https://www.seedsforafrica.co.za/products/horticultural-perlite) |
+| AGL-0046 | growing-mediums | Horticultural Vermiculite - Medium Grade (3mm-5mm) — 1 Litre | [Product listing](https://www.seedsforafrica.co.za/products/horticultural-vermiculite-medium-grade-3mm-to-5-mm) |
+| AGL-0047 | growing-mediums | Horticultural Vermiculite - Large Grade (5mm-20mm) — 1 Litre | [Product listing](https://www.seedsforafrica.co.za/products/horticultural-vermiculite-large-grade-5mm-20mm) |
+| AGL-0048 | irrigation-supplies | Blumat Classic XL 2 pcs - Hydroponic System / Irrigation System | [Product listing](https://www.seedsforafrica.co.za/products/blumat-classic-xl-2-pcs-hydroponic-system-irrigation-system) |
+| AGL-0049 | irrigation-supplies | Drip Irrigation Kit - Commercial Grade - Netafim - 200m2 coverage | [Product listing](https://www.seedsforafrica.co.za/products/drip-irrigation-kit-commercial-grade-netafim-200m2-coverage) |
+| AGL-0050 | irrigation-supplies | Irrigatia C24 Solar Automatic Watering System includes 12 Dripper Extension Kit - Hydroponic System / Irrigation System | [Product listing](https://www.seedsforafrica.co.za/products/irrigatia-c24-solar-automatic-watering-system-with-extension-kit-hydroponic-system-irrigation-system) |

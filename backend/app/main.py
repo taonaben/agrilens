@@ -10,11 +10,13 @@ from pydantic import BaseModel, Field
 from .auth import require_user, router as auth_router
 from .gemini import GeminiUnavailable, generate_answer
 from .model import ModelContractError, Prediction, get_diagnosis_model
+from .shop import router as shop_router
 
 
 load_dotenv()
 app = FastAPI(title="AgriLens API", version="1.0.0")
 app.include_router(auth_router)
+app.include_router(shop_router)
 
 
 class PredictionResponse(BaseModel):
