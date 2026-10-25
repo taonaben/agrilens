@@ -4,7 +4,7 @@ This service runs the nine-class TFLite classifier and requests bounded explanat
 
 ## Container setup
 
-This is an independently buildable service folder in the repository. From `backend/`, copy `.env.example` to `.env`, fill in Supabase and Gemini settings, then run `docker compose up --build -d`. Compose builds only this folder and mounts the ignored TFLite model and sibling training artifacts read-only. The model and artifacts are intentionally excluded from the image and Git context.
+This is an independently buildable service folder in the repository. From `backend/`, copy `.env.example` to `.env`, fill in Supabase and Gemini settings, then run `docker compose up --build -d`. Compose builds only this folder, mounts `app/` into the container, and enables Uvicorn reload. Saving a backend source file in `app/` automatically restarts the API process; changes are shared both ways between the host and container. The ignored TFLite model and sibling training artifacts are mounted read-only and excluded from the image and Git context.
 
 View logs with `docker compose logs -f api`; stop the local service with `docker compose down`. The container listens on port 8000. Configure the Flutter app's `AGRILENS_API_BASE_URL` to reach the API. Put a TLS ingress or load balancer in front of deployed containers. The API is stateless; scale replicas behind that ingress, and keep each container's `WEB_CONCURRENCY` conservative because each worker loads its own model into memory. Supabase holds durable application data; no conversation state is stored in the container.
 
@@ -21,6 +21,8 @@ The deployed service must be given `agrilens_model.tflite` and the three version
 ## API
 
 - `GET /health`: process health only; it does not certify model readiness.
+- `POST /auth/register`: JSON `{ "email": "...", "password": "..." }`; creates a Supabase Auth account. Whether a session is returned depends on Supabase email-confirmation settings.
+- `POST /auth/login`: JSON `{ "email": "...", "password": "..." }`; returns the Supabase Auth session, including the access token Flutter sends as a bearer token to protected endpoints.
 - `POST /v1/diagnoses`: multipart `image` upload; returns the typed prediction and score evidence.
 - `POST /v1/answers`: JSON classifier evidence plus recent turns and optional follow-up; returns `{ "answer": ... }`.
 
