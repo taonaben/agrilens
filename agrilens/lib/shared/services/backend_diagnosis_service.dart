@@ -1,9 +1,9 @@
 import 'package:dio/dio.dart';
 
-import '../models/prediction.dart' show DecisionState;
-import 'backend_api_client.dart';
-import 'diagnosis_result.dart';
-import 'service_interfaces.dart';
+import '../../app/chat/models/prediction.dart' show DecisionState;
+import '../api/api_client.dart';
+import '../../app/chat/services/diagnosis_result.dart';
+import '../../app/chat/services/service_interfaces.dart';
 
 class BackendDiagnosisService implements DiagnosisServiceInterface {
   final BackendApiClient _api;

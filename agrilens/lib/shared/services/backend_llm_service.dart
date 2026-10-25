@@ -1,10 +1,10 @@
 import 'package:dio/dio.dart';
 
-import 'backend_api_client.dart';
-import 'diagnosis_result.dart';
-import 'local_llm_service.dart'
+import '../api/api_client.dart';
+import '../../app/chat/services/diagnosis_result.dart';
+import '../../app/chat/services/local_llm_service.dart'
     show LlmCancelled, LlmChunk, LlmError, LlmResult, LlmSuccess;
-import 'service_interfaces.dart';
+import '../../app/chat/services/service_interfaces.dart';
 
 class BackendLlmService implements LlmServiceInterface {
   final BackendApiClient _api;

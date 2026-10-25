@@ -7,7 +7,7 @@ class BackendApiClient {
   final Dio _dio;
   final AccessTokenProvider _accessTokenProvider;
 
-  BackendApiClient({
+  BackendApiClient.ApiClient({
     required AccessTokenProvider accessTokenProvider,
     String? baseUrl,
   }) : _accessTokenProvider = accessTokenProvider,
@@ -23,7 +23,7 @@ class BackendApiClient {
 
   static String get _configuredBaseUrl {
     if (!dotenv.isInitialized) return '';
-    return dotenv.env['AGRILENS_API_BASE_URL'] ?? '';
+    return dotenv.env['API_BASE_URL'] ?? '';
   }
 
   bool get isConfigured {

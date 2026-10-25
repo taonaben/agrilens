@@ -4,9 +4,9 @@ import 'package:agrilens/app/chat/data/message_repository.dart';
 import 'package:agrilens/app/chat/data/prediction_repository.dart';
 import 'package:agrilens/app/chat/models/conversation.dart' as model;
 import 'package:agrilens/app/chat/services/diagnosis_pipeline.dart';
-import 'package:agrilens/app/chat/services/backend_api_client.dart';
-import 'package:agrilens/app/chat/services/backend_diagnosis_service.dart';
-import 'package:agrilens/app/chat/services/backend_llm_service.dart';
+import 'package:agrilens/shared/api/api_client.dart';
+import 'package:agrilens/shared/services/backend_diagnosis_service.dart';
+import 'package:agrilens/shared/services/backend_llm_service.dart';
 import 'package:agrilens/app/chat/views/chat_page.dart';
 import 'package:agrilens/shared/theme/app_colors.dart';
 import 'package:agrilens/shared/utils/app_constants.dart';
@@ -85,10 +85,10 @@ class _AppState extends State<App> {
     _conversationRepo = ConversationRepository(_database);
     _messageRepo = MessageRepository(_database);
     _predictionRepo = PredictionRepository(_database);
-    final api = BackendApiClient(
+    final api = BackendApiClient.ApiClient(
       accessTokenProvider:
           () async => Supabase.instance.client.auth.currentSession?.accessToken,
-      baseUrl: dotenv.env['AGRILENS_API_BASE_URL'],
+      baseUrl: dotenv.env['API_BASE_URL'],
     );
     _diagnosisService = BackendDiagnosisService(api);
     _llmService = BackendLlmService(api);
@@ -123,7 +123,7 @@ class _AppState extends State<App> {
       await _llmService.load();
       if (!_diagnosisService.isConfigured) {
         _serviceWarning =
-            'The FastAPI server URL is missing or must use HTTPS. Configure AGRILENS_API_BASE_URL.';
+            'The FastAPI server URL is missing or must use HTTPS. Configure API_BASE_URL.';
       }
 
       await _reloadConversations();

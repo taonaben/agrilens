@@ -84,7 +84,7 @@ class _AuthPageState extends State<AuthPage> {
         const SizedBox(height: 12),
         const Text(
           'Add SUPABASE_URL and SUPABASE_ANON_KEY to the app .env file, then '
-          'configure AGRILENS_API_BASE_URL for the FastAPI service.',
+          'configure API_BASE_URL for the FastAPI service.',
         ),
       ],
     );
