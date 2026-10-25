@@ -10,6 +10,10 @@ services:
       AGRILENS_MODEL_PATH: /models/agrilens_model.tflite
       AGRILENS_ARTIFACTS_DIR: /models/artifacts
       WEB_CONCURRENCY: ${WEB_CONCURRENCY:-1}
+      REDIS_URL: redis://redis:6379/2
+    depends_on:
+      redis:
+        condition: service_healthy
     ports:
       - "${AGRILENS_API_PORT:-8888}:8888"
     volumes:
@@ -17,4 +21,13 @@ services:
       - ../agrilens/assets/models/agrilens_model.tflite:/models/agrilens_model.tflite:ro
       - ../agrilens-training/artifacts:/models/artifacts:ro
     command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8888", "--reload", "--reload-dir", "/app"]
+    restart: unless-stopped
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--appendonly", "no"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
     restart: unless-stopped

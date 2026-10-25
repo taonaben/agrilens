@@ -4,15 +4,15 @@ This service runs the nine-class TFLite classifier and requests bounded explanat
 
 ## Container setup
 
-This is an independently buildable service folder in the repository. From `backend/`, copy `.env.example` to `.env`, fill in Supabase and Gemini settings, then run `docker compose up --build -d`. Compose builds only this folder, mounts `app/` into the container, and enables Uvicorn reload. Saving a backend source file in `app/` automatically restarts the API process; changes are shared both ways between the host and container. The ignored TFLite model and sibling training artifacts are mounted read-only and excluded from the image and Git context.
+This is an independently buildable service folder in the repository. From `backend/`, copy `.env.example` to `.env`, fill in Supabase, Gemini, and OpenWeather settings, then run `docker compose up --build -d`. Compose builds only this folder, mounts `app/` into the container, and enables Uvicorn reload. Saving a backend source file in `app/` automatically restarts the API process; changes are shared both ways between the host and container. The ignored TFLite model and sibling training artifacts are mounted read-only and excluded from the image and Git context. Compose also starts Redis for shared weather caching.
 
-View logs with `docker compose logs -f api`; stop the local service with `docker compose down`. The container listens on port 8000. Configure the Flutter app's `AGRILENS_API_BASE_URL` to reach the API. Put a TLS ingress or load balancer in front of deployed containers. The API is stateless; scale replicas behind that ingress, and keep each container's `WEB_CONCURRENCY` conservative because each worker loads its own model into memory. Supabase holds durable application data; no conversation state is stored in the container.
+View logs with `docker compose logs -f api`; stop the local service with `docker compose down`. The container listens on port 8888. Configure the Flutter app's `AGRILENS_API_BASE_URL` to reach the API. Put a TLS ingress or load balancer in front of deployed containers. The API is stateless; scale replicas behind that ingress, and keep each container's `WEB_CONCURRENCY` conservative because each worker loads its own model into memory. Supabase holds durable application data; no conversation state is stored in the container.
 
 For a platform that builds directly from the repository, set the Docker build context to `backend/` and the Dockerfile to `backend/Dockerfile`. Provide the model and artifacts as mounted read-only files at `/models/agrilens_model.tflite` and `/models/artifacts/`, and inject secrets from the platform's secret manager.
 
 ## Local Python setup
 
-Use Linux x86_64 or ARM64 with CPython 3.11, supported by the available `tflite-runtime` wheel. Install `requirements.txt`, copy `.env.example` to `.env`, and set the Supabase URL/public anon key and Gemini key. `AGRILENS_MODEL_PATH` and `AGRILENS_ARTIFACTS_DIR` default to the existing local app model and training artifacts.
+Use Linux x86_64 or ARM64 with CPython 3.11, supported by the available `tflite-runtime` wheel. Install `requirements.txt`, copy `.env.example` to `.env`, and set the Supabase URL/public anon key, Gemini key, and OpenWeather API key. Set `REDIS_URL` to a reachable Redis instance to enable weather caching; if it is unset or Redis is unavailable, weather requests fetch directly from OpenWeather. `AGRILENS_MODEL_PATH` and `AGRILENS_ARTIFACTS_DIR` default to the existing local app model and training artifacts.
 
 Run with `uvicorn --env-file .env app.main:app --host 0.0.0.0 --port 8000` from this directory. Flutter should call the service over HTTPS in deployed environments. Local HTTP is for development only.
 
@@ -25,6 +25,7 @@ The deployed service must be given `agrilens_model.tflite` and the three version
 - `POST /auth/login`: JSON `{ "email": "...", "password": "..." }`; returns the Supabase Auth session, including the access token Flutter sends as a bearer token to protected endpoints.
 - `POST /v1/diagnoses`: multipart `image` upload; returns the typed prediction and score evidence.
 - `POST /v1/answers`: JSON classifier evidence plus recent turns and optional follow-up; returns `{ "answer": ... }`.
+- `GET /v1/weather?lat=…&lon=…`: authenticated current weather and five-day forecast at three-hour intervals, normalized to metric units. Requires `OPENWEATHER_API_KEY`. Current conditions are cached in Redis for 10 minutes and forecast data for 30 minutes; cache keys use coordinates rounded to three decimal places. Location is not persisted.
 
 Authenticated requests use `Authorization: Bearer <Supabase access token>`. The backend verifies the token with Supabase Auth. Apply `supabase/schema.sql` in the Supabase SQL editor to provision owner-scoped history, shop tables, RLS policies, and the private photo bucket. Flutter must call FastAPI only.
 

@@ -1,22 +1,40 @@
 from __future__ import annotations
 
 import os
+from contextlib import asynccontextmanager
 from typing import Literal
 
 from dotenv import load_dotenv
 from fastapi import Depends, FastAPI, File, HTTPException, UploadFile
 from pydantic import BaseModel, Field
+from redis.asyncio import Redis
 
 from .auth import require_user, router as auth_router
 from .gemini import GeminiUnavailable, generate_answer
 from .model import ModelContractError, Prediction, get_diagnosis_model
 from .shop import router as shop_router
+from .weather import router as weather_router
 
 
 load_dotenv()
-app = FastAPI(title="AgriLens API", version="1.0.0")
+
+
+@asynccontextmanager
+async def lifespan(application: FastAPI):
+    redis_url = os.getenv("REDIS_URL", "").strip()
+    application.state.weather_redis = Redis.from_url(redis_url) if redis_url else None
+    try:
+        yield
+    finally:
+        redis_client = application.state.weather_redis
+        if redis_client is not None:
+            await redis_client.aclose()
+
+
+app = FastAPI(title="AgriLens API", version="1.0.0", lifespan=lifespan)
 app.include_router(auth_router)
 app.include_router(shop_router)
+app.include_router(weather_router)
 
 
 class PredictionResponse(BaseModel):
