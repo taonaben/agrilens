@@ -1,0 +1,17 @@
+[
+  {
+    "title": "Solanaceous Section",
+    "organization": "Zimbabwe Department of Research and Specialist Services",
+    "source_url": "https://www.drss.gov.zw/index.php/158-solanaceous-section/173-solanaceous-section",
+    "published_on": null,
+    "reviewed_on": "2026-10-25",
+    "chunks": [
+      {
+        "topic": "tomato_water_management",
+        "crop": "tomato",
+        "condition": null,
+        "content": "The Zimbabwe Department of Research and Specialist Services describes drip irrigation as a way to apply water close to tomato plants and advises avoiding waterlogged conditions. The page does not provide a forecast-based irrigation rule or current field-specific water amounts. Use this only as general crop-management context; do not infer an irrigation schedule without the farmer's soil, crop stage, and irrigation setup. Older pesticide references on this page were not included."
+      }
+    ]
+  }
+]

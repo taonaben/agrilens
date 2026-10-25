@@ -12,7 +12,7 @@ For a platform that builds directly from the repository, set the Docker build co
 
 ## Local Python setup
 
-Use Linux x86_64 or ARM64 with CPython 3.11, supported by the available `tflite-runtime` wheel. Install `requirements.txt`, copy `.env.example` to `.env`, and set the Supabase URL/public anon key, Gemini key, and OpenWeather API key. Set `REDIS_URL` to a reachable Redis instance to enable weather caching; if it is unset or Redis is unavailable, weather requests fetch directly from OpenWeather. `AGRILENS_MODEL_PATH` and `AGRILENS_ARTIFACTS_DIR` default to the existing local app model and training artifacts.
+Use Linux x86_64 or ARM64 with CPython 3.11, supported by the available `tflite-runtime` wheel. Install `requirements.txt`, copy `.env.example` to `.env`, and set the Supabase URL/public anon key, Gemini key, and OpenWeather API key. Set `GEMINI_EMBEDDING_MODEL` consistently with the Supabase embedding index (default `gemini-embedding-2`). Set `REDIS_URL` to a reachable Redis instance to enable weather caching; if it is unset or Redis is unavailable, weather requests fetch directly from OpenWeather. `AGRILENS_MODEL_PATH` and `AGRILENS_ARTIFACTS_DIR` default to the existing local app model and training artifacts.
 
 Run with `uvicorn --env-file .env app.main:app --host 0.0.0.0 --port 8000` from this directory. Flutter should call the service over HTTPS in deployed environments. Local HTTP is for development only.
 
@@ -24,10 +24,10 @@ The deployed service must be given `agrilens_model.tflite` and the three version
 - `POST /auth/register`: JSON `{ "email": "...", "password": "..." }`; creates a Supabase Auth account. Whether a session is returned depends on Supabase email-confirmation settings.
 - `POST /auth/login`: JSON `{ "email": "...", "password": "..." }`; returns the Supabase Auth session, including the access token Flutter sends as a bearer token to protected endpoints.
 - `POST /v1/diagnoses`: multipart `image` upload; returns the typed prediction and score evidence.
-- `POST /v1/answers`: JSON classifier evidence plus recent turns and optional follow-up; returns `{ "answer": ... }`.
+- `POST /v1/answers`: JSON classifier evidence, recent turns, optional follow-up, and optional `latitude` plus `longitude`; returns `answer`, model-selected `products`, and cited `sources`. Existing clients can continue reading `answer`; location remains optional.
 - `GET /v1/weather?lat=…&lon=…`: authenticated current weather and five-day forecast at three-hour intervals, normalized to metric units. Requires `OPENWEATHER_API_KEY`. Current conditions are cached in Redis for 10 minutes and forecast data for 30 minutes; cache keys use coordinates rounded to three decimal places. Location is not persisted.
 
-Authenticated requests use `Authorization: Bearer <Supabase access token>`. The backend verifies the token with Supabase Auth. Apply `supabase/schema.sql` in the Supabase SQL editor to provision owner-scoped history, shop tables, RLS policies, and the private photo bucket. Flutter must call FastAPI only.
+Authenticated requests use `Authorization: Bearer <Supabase access token>`. The backend verifies the token with Supabase Auth. Apply or reapply `supabase/schema.sql` in the Supabase SQL editor to provision owner-scoped history, shop tables, pgvector search, RLS policies, and the private photo bucket. Flutter must call FastAPI only.
 
 ### Shop API
 
@@ -35,12 +35,15 @@ Authenticated requests use `Authorization: Bearer <Supabase access token>`. The 
 - `GET /v1/products`: authenticated list of active products.
 - `POST /v1/products`: add a product using the `X-Shop-Admin-Token` header. Include optional `image_url` to download a product image into Supabase Storage.
 - `DELETE /v1/products/{product_id}`: deactivate a product using the operator token. Existing order snapshots remain intact.
-- `POST /v1/products/import`: import CSV using the operator token. Headers are `sku,name,description,price,currency,stock_quantity,crops,conditions`; separate crop and condition tags with `|`. An optional `image_url` column supplies an image per row. Existing SKUs are updated by import.
-- `GET /v1/recommendations`: products matched to the authenticated user's scans and explicit crop or condition mentions in saved user messages, with a reason for each match.
+- `POST /v1/products/import`: import CSV using the operator token. Required headers are `sku,name,description,price,currency,stock_quantity,crops,conditions`; separate list values with `|`. Optional AI-evidence headers are `recommended_uses,evidence_source_url,evidence_reviewed_at,stock_verified_at,recommendation_eligible`; an optional `image_url` supplies a product image. Set `recommendation_eligible=true` only after verifying the product use, evidence URL, review date, and stock. Existing demo rows remain ineligible until reimported with verified data.
+- `POST /v1/guidance/import`: import an operator-reviewed source and its concise text chunks; the backend embeds and upserts them with source citation metadata.
+- `GET /v1/recommendations`: retired; returns HTTP 410. Contextual product choices are included with `/v1/answers` only when Gemini selects a verified, active, in-stock candidate.
 - `POST /v1/orders`: create an order with `items` (`product_id`, `quantity`), `contact_name`, `phone`, and `delivery_address`. Stock is reserved transactionally. Orders containing multiple currencies are rejected.
 - `GET /v1/orders`: list the authenticated user's orders with item snapshots.
 
 Set `SUPABASE_SERVICE_ROLE_KEY` and a long random `SHOP_ADMIN_TOKEN` on the backend to enable catalog management. Keep both server-side; clients receive neither secret. Product images must be publicly reachable HTTPS JPEG, PNG, or WebP files under 5 MB. FastAPI validates the resolved host and redirects, uploads the original bytes to the public `agrilens-products` bucket, and stores the object path on the product. The shop image bucket is separate from private chat photos. Orders do not collect payment. `POST /v1/history/sync` supports record upserts; photo transfer and remote deletion are still separate work.
+
+The initial guidance seed contains only general tomato water-management context from the Zimbabwe DRSS Solanaceous Section; it deliberately omits that page's older pesticide references. After applying the schema and configuring the admin token, import it with `python scripts/import_guidance_seed.py --api-base-url http://localhost:8888`. Disease-specific recommendations remain unavailable until reviewed sources and verified product records are added.
 
 ## Contract limits
 

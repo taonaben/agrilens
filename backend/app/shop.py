@@ -8,7 +8,7 @@ import io
 import os
 import re
 import socket
-from datetime import datetime
+from datetime import date, datetime
 from decimal import Decimal, InvalidOperation
 from typing import Any
 from urllib.parse import quote, urljoin, urlsplit
@@ -16,9 +16,10 @@ from uuid import UUID, uuid4
 
 import httpx
 from fastapi import APIRouter, Depends, File, Header, HTTPException, UploadFile
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 from .auth import require_user
+from .embeddings import EmbeddingUnavailable, embed_texts
 
 router = APIRouter(prefix="/v1", tags=["shop"])
 
@@ -101,6 +102,8 @@ def _public_product_image_url(path: str | None) -> str | None:
 
 def _product_response(row: dict[str, Any]) -> dict[str, Any]:
     result = dict(row)
+    result.pop("search_embedding", None)
+    result.pop("search_embedding_model", None)
     result["image_url"] = _public_product_image_url(result.pop("image_path", None))
     return result
 
@@ -211,6 +214,11 @@ class ProductInput(BaseModel):
     stock_quantity: int = Field(ge=0, le=1_000_000)
     crops: list[str] = Field(default_factory=list, max_length=10)
     conditions: list[str] = Field(default_factory=list, max_length=30)
+    recommended_uses: list[str] = Field(default_factory=list, max_length=20)
+    evidence_source_url: str | None = Field(default=None, max_length=2048)
+    evidence_reviewed_at: date | None = None
+    stock_verified_at: date | None = None
+    recommendation_eligible: bool = False
     image_url: str | None = Field(default=None, max_length=2048)
 
     @field_validator("sku", "name", "currency")
@@ -226,13 +234,60 @@ class ProductInput(BaseModel):
             raise ValueError("currency must be a three-letter code")
         return value
 
-    @field_validator("crops", "conditions")
+    @field_validator("crops", "conditions", "recommended_uses")
     @classmethod
     def normalize_tags(cls, value: list[str]) -> list[str]:
         normalized = list(dict.fromkeys(item.strip().lower() for item in value if item.strip()))
         if any(len(item) > 80 for item in normalized):
             raise ValueError("tag is too long")
         return normalized
+
+    @field_validator("evidence_source_url")
+    @classmethod
+    def require_https_evidence(cls, value: str | None) -> str | None:
+        value = value.strip() if value else None
+        if value:
+            parsed = urlsplit(value)
+            if parsed.scheme.lower() != "https" or not parsed.hostname or parsed.username or parsed.password:
+                raise ValueError("Evidence source URL must use HTTPS")
+        return value or None
+
+    @model_validator(mode="after")
+    def validate_recommendation_evidence(self) -> ProductInput:
+        if self.recommendation_eligible and not all((
+            self.crops,
+            self.recommended_uses,
+            self.evidence_source_url,
+            self.evidence_reviewed_at,
+            self.stock_verified_at,
+        )):
+            raise ValueError(
+                "Eligible products need crop fit, approved uses, evidence source and review date, and stock verification date"
+            )
+        return self
+
+
+def _product_search_text(payload: dict[str, Any]) -> str:
+    return "\n".join((
+        f"Product: {payload['name']}",
+        f"Description: {payload.get('description', '')}",
+        f"Supported crops: {', '.join(payload.get('crops') or [])}",
+        f"Supported conditions: {', '.join(payload.get('conditions') or [])}",
+        f"Reviewed uses: {', '.join(payload.get('recommended_uses') or [])}",
+    ))
+
+
+async def _attach_product_embeddings(payloads: list[dict[str, Any]]) -> None:
+    eligible = [payload for payload in payloads if payload.get("recommendation_eligible")]
+    try:
+        vectors = await embed_texts([_product_search_text(payload) for payload in eligible])
+    except (EmbeddingUnavailable, ValueError) as exc:
+        raise HTTPException(503, "Could not index verified products") from exc
+    model = os.getenv("GEMINI_EMBEDDING_MODEL", "gemini-embedding-2")
+    vector_by_identity = {id(payload): vector for payload, vector in zip(eligible, vectors)}
+    for payload in payloads:
+        payload["search_embedding"] = vector_by_identity.get(id(payload))
+        payload["search_embedding_model"] = model if payload.get("recommendation_eligible") else None
 
     @field_validator("image_url")
     @classmethod
@@ -263,12 +318,6 @@ class CreateOrderRequest(BaseModel):
         if len({item.product_id for item in value}) != len(value):
             raise ValueError("Each product may appear only once")
         return value
-
-
-class Recommendation(BaseModel):
-    product: dict[str, Any]
-    reasons: list[str]
-    uncertain: bool = False
 
 
 class ConversationSync(BaseModel):
@@ -325,10 +374,6 @@ class CropPreferences(BaseModel):
         if unsupported:
             raise ValueError("Supported crops are maize and tomato")
         return crops
-
-
-def _normal(value: str) -> str:
-    return re.sub(r"[^a-z0-9]+", " ", value.lower()).strip()
 
 
 @router.post("/history/sync")
@@ -398,6 +443,7 @@ async def add_product(product: ProductInput):
     image_path = None
     try:
         payload = product.model_dump(mode="json", exclude={"image_url"})
+        await _attach_product_embeddings([payload])
         if product.image_url:
             data, mime_type, extension = await _download_product_image(product.image_url)
             image_path = await _upload_product_image(data, mime_type, extension, product.sku)
@@ -447,7 +493,11 @@ async def import_products(file: UploadFile = File(...)):
         text = raw.decode("utf-8-sig")
         reader = csv.DictReader(io.StringIO(text))
         required = {"sku", "name", "description", "price", "currency", "stock_quantity", "crops", "conditions"}
-        allowed = required | {"image_url"}
+        optional = {
+            "image_url", "recommended_uses", "evidence_source_url", "evidence_reviewed_at",
+            "stock_verified_at", "recommendation_eligible",
+        }
+        allowed = required | optional
         if reader.fieldnames is None or not required.issubset(reader.fieldnames) or not set(reader.fieldnames).issubset(allowed):
             raise ValueError("CSV headers must include: " + ",".join(sorted(required)) + "; image_url is optional")
         has_image_column = "image_url" in reader.fieldnames
@@ -457,14 +507,23 @@ async def import_products(file: UploadFile = File(...)):
             try:
                 price = Decimal(row["price"])
                 stock = int(row["stock_quantity"])
+                eligibility = (row.get("recommendation_eligible") or "false").strip().lower()
+                if eligibility not in {"true", "false"}:
+                    raise ValueError("recommendation_eligible must be true or false")
                 data = ProductInput(sku=row["sku"], name=row["name"], description=row["description"],
                     price=price, currency=row["currency"], stock_quantity=stock,
                     crops=[tag for tag in row["crops"].split("|") if tag.strip()],
                     conditions=[tag for tag in row["conditions"].split("|") if tag.strip()],
+                    recommended_uses=[tag for tag in (row.get("recommended_uses") or "").split("|") if tag.strip()],
+                    evidence_source_url=row.get("evidence_source_url") or None,
+                    evidence_reviewed_at=date.fromisoformat(row["evidence_reviewed_at"]) if row.get("evidence_reviewed_at") else None,
+                    stock_verified_at=date.fromisoformat(row["stock_verified_at"]) if row.get("stock_verified_at") else None,
+                    recommendation_eligible=eligibility == "true",
                     image_url=row.get("image_url"))
             except (ValueError, InvalidOperation, TypeError) as exc:
                 raise ValueError(f"Invalid product row {line_number}") from exc
-            records.append(data.model_dump(mode="json", exclude={"image_url"}) | {"active": True})
+            product_payload = data.model_dump(mode="json", exclude={"image_url"}) | {"active": True}
+            records.append(product_payload)
             image_sources[data.sku] = data.image_url
         if not records:
             raise ValueError("CSV contains no product rows")
@@ -478,6 +537,7 @@ async def import_products(file: UploadFile = File(...)):
 
     uploaded_paths: list[str] = []
     try:
+        await _attach_product_embeddings(records)
         for record in records:
             source_url = image_sources[record["sku"]]
             if source_url:
@@ -504,62 +564,12 @@ async def import_products(file: UploadFile = File(...)):
     return {"imported": len(response.json())}
 
 
-@router.get("/recommendations", response_model=list[Recommendation])
-async def recommendations(user_id: str = Depends(require_user), authorization: str | None = Header(default=None)):
-    token = authorization.split(" ", 1)[1].strip() if authorization and authorization.lower().startswith("bearer ") else ""
-    if not token:
-        raise HTTPException(401, "A signed-in user is required")
-    predictions, messages, products, saved_crops = await _recommendation_data(token)
-    crop_signals: dict[str, str] = {}
-    condition_signals: dict[str, tuple[str, bool]] = {}
-    for prediction in predictions:
-        crop = _normal(prediction.get("crop", ""))
-        if crop:
-            crop_signals[crop] = "For your " + crop + " crop"
-        state = prediction.get("decision_state")
-        condition = _normal(prediction.get("condition", ""))
-        if condition and condition != "healthy" and state != "unsupportedOrUnclear":
-            uncertain = state == "uncertain"
-            condition_signals.setdefault(condition, ("A recent scan suggested " + condition, uncertain))
-    for crop_row in saved_crops:
-        crop = _normal(crop_row.get("crop", ""))
-        if crop:
-            crop_signals[crop] = "For your " + crop + " crop"
-    discussion = " ".join(_normal(message.get("text_content") or "") for message in messages)
-    for crop in ("maize", "tomato"):
-        if re.search(rf"\b{crop}\b", discussion):
-            crop_signals.setdefault(crop, "Based on a previous discussion about " + crop)
-    result = []
-    for product in products:
-        reasons: list[str] = []
-        uncertain = False
-        for crop in product.get("crops") or []:
-            reason = crop_signals.get(_normal(crop))
-            if reason:
-                reasons.append(reason)
-        for condition in product.get("conditions") or []:
-            normalized_condition = _normal(condition)
-            signal = condition_signals.get(normalized_condition)
-            if signal is None and normalized_condition and re.search(rf"\b{re.escape(normalized_condition)}\b", discussion):
-                signal = ("Based on a previous discussion about " + condition, False)
-            if signal:
-                reasons.append(signal[0])
-                uncertain = uncertain or signal[1]
-        if reasons:
-            result.append(Recommendation(product=_product_response(product), reasons=list(dict.fromkeys(reasons)), uncertain=uncertain))
-    result.sort(key=lambda item: (item.uncertain, len(item.reasons) * -1, item.product["name"].lower()))
-    return result
-
-
-async def _recommendation_data(token: str):
-    predictions = await _rest("agrilens_predictions", user_token=token,
-        params={"select": "crop,condition,decision_state,created_at", "order": "created_at.desc", "limit": "100"})
-    messages = await _rest("agrilens_messages", user_token=token,
-        params={"select": "text_content,created_at", "role": "eq.user", "content_type": "eq.text", "order": "created_at.desc", "limit": "200"})
-    products = await _rest("shop_products", user_token=token,
-        params={"select": "*", "active": "eq.true", "order": "name.asc"})
-    saved_crops = await _rest("agrilens_user_crops", user_token=token, params={"select": "crop"})
-    return predictions or [], messages or [], products or [], saved_crops or []
+@router.get("/recommendations", deprecated=True, include_in_schema=False)
+async def recommendations_deprecated():
+    raise HTTPException(
+        status_code=410,
+        detail="This rule-based endpoint is retired; answer-specific product suggestions are returned by POST /v1/answers.",
+    )
 
 
 @router.post("/orders", status_code=201)

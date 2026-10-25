@@ -209,6 +209,11 @@ async def get_weather(
     user_id: str = Depends(require_user),
 ) -> WeatherResponse:
     del user_id  # Authentication is required; location is never persisted.
+    redis_client = getattr(request.app.state, "weather_redis", None)
+    return await weather_for_coordinates(lat, lon, redis_client)
+
+
+async def weather_for_coordinates(lat: float, lon: float, redis_client: Any = None) -> WeatherResponse:
     api_key = os.getenv("OPENWEATHER_API_KEY", "").strip()
     if not api_key:
         raise HTTPException(status_code=503, detail="Weather service is not configured")
@@ -220,7 +225,6 @@ async def get_weather(
     coordinate_key = f"{latitude:.3f}:{longitude:.3f}"
     current_key = f"weather:v1:current:{coordinate_key}"
     forecast_key = f"weather:v1:forecast:{coordinate_key}"
-    redis_client = getattr(request.app.state, "weather_redis", None)
 
     current_data, forecast_data = await asyncio.gather(
         _read_cache(redis_client, current_key),
@@ -242,22 +246,13 @@ async def get_weather(
         )
         current_data, forecast_data = await asyncio.gather(current_task, forecast_task)
 
-    # Cache only data fetched successfully from the provider.
-    writes = []
-    if current_cache_miss:
-        writes.append(_write_cache(redis_client, current_key, current_data, CURRENT_TTL_SECONDS))
-    if forecast_cache_miss:
-        writes.append(_write_cache(redis_client, forecast_key, forecast_data, FORECAST_TTL_SECONDS))
-    if writes:
-        await asyncio.gather(*writes)
-
     try:
         current = _normalize_current(current_data)
         forecast = _normalize_forecast(forecast_data)
         timezone_offset = int(_number(current_data, "timezone"))
         city_name = current_data.get("name")
         country_code = (current_data.get("sys") or {}).get("country")
-        return WeatherResponse(
+        weather_result = WeatherResponse(
             latitude=latitude,
             longitude=longitude,
             city_name=str(city_name) if city_name else None,
@@ -269,3 +264,13 @@ async def get_weather(
     except (KeyError, TypeError, ValueError) as exc:
         logger.warning("OpenWeather returned a response that could not be normalized")
         raise HTTPException(status_code=502, detail="Weather provider returned invalid data") from exc
+
+    # Cache only provider data that has passed normalization.
+    writes = []
+    if current_cache_miss:
+        writes.append(_write_cache(redis_client, current_key, current_data, CURRENT_TTL_SECONDS))
+    if forecast_cache_miss:
+        writes.append(_write_cache(redis_client, forecast_key, forecast_data, FORECAST_TTL_SECONDS))
+    if writes:
+        await asyncio.gather(*writes)
+    return weather_result

@@ -1,6 +1,10 @@
 ﻿-- Apply in the Supabase SQL editor before enabling FastAPI history sync.
 -- All data access from Flutter is mediated by FastAPI. RLS is a second boundary.
 
+create schema if not exists extensions;
+create extension if not exists vector with schema extensions;
+grant usage on schema extensions to authenticated;
+
 create table if not exists public.agrilens_conversations (
   id uuid primary key,
   owner_id uuid not null references auth.users(id) on delete cascade,
@@ -137,18 +141,129 @@ create table if not exists public.shop_products (
   stock_quantity integer not null default 0 check (stock_quantity >= 0),
   crops text[] not null default '{}',
   conditions text[] not null default '{}',
+  recommended_uses text[] not null default '{}',
+  evidence_source_url text,
+  evidence_reviewed_at date,
+  stock_verified_at date,
+  recommendation_eligible boolean not null default false,
+  search_embedding extensions.vector(768),
+  search_embedding_model text,
   image_path text,
   active boolean not null default true,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
 alter table public.shop_products add column if not exists image_path text;
+alter table public.shop_products add column if not exists recommended_uses text[] not null default '{}';
+alter table public.shop_products add column if not exists evidence_source_url text;
+alter table public.shop_products add column if not exists evidence_reviewed_at date;
+alter table public.shop_products add column if not exists stock_verified_at date;
+alter table public.shop_products add column if not exists recommendation_eligible boolean not null default false;
+alter table public.shop_products add column if not exists search_embedding extensions.vector(768);
+alter table public.shop_products add column if not exists search_embedding_model text;
+
+do $$ begin
+  if not exists (select 1 from pg_constraint where conname = 'shop_products_recommendation_evidence') then
+    alter table public.shop_products add constraint shop_products_recommendation_evidence check (
+      not recommendation_eligible or (
+        cardinality(crops) > 0 and cardinality(recommended_uses) > 0
+        and evidence_source_url is not null and evidence_reviewed_at is not null
+        and stock_verified_at is not null and search_embedding is not null
+        and search_embedding_model is not null
+      )
+    );
+  end if;
+end $$;
 
 create index if not exists shop_products_active_name on public.shop_products(active, name);
+create index if not exists shop_products_search_embedding_hnsw
+  on public.shop_products using hnsw (search_embedding extensions.vector_cosine_ops)
+  where recommendation_eligible and active and stock_quantity > 0;
 alter table public.shop_products enable row level security;
 drop policy if exists "authenticated reads active shop products" on public.shop_products;
 create policy "authenticated reads active shop products" on public.shop_products
   for select to authenticated using (active = true);
+
+create table if not exists public.agrilens_guidance_chunks (
+  id uuid primary key default gen_random_uuid(),
+  source_url text not null,
+  chunk_index integer not null check (chunk_index >= 0),
+  source_title text not null,
+  source_organization text not null,
+  source_published_on date,
+  reviewed_on date not null,
+  topic text not null,
+  crop text not null,
+  condition text,
+  content text not null,
+  is_approved boolean not null default false,
+  embedding extensions.vector(768),
+  embedding_model text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  unique (source_url, chunk_index),
+  check (not is_approved or (embedding is not null and embedding_model is not null))
+);
+
+alter table public.agrilens_guidance_chunks enable row level security;
+drop policy if exists "authenticated reads approved agronomy guidance" on public.agrilens_guidance_chunks;
+create policy "authenticated reads approved agronomy guidance" on public.agrilens_guidance_chunks
+  for select to authenticated using (is_approved = true);
+grant select on public.agrilens_guidance_chunks to authenticated;
+
+create index if not exists agrilens_guidance_embedding_hnsw
+  on public.agrilens_guidance_chunks using hnsw (embedding extensions.vector_cosine_ops)
+  where is_approved;
+
+create or replace function public.search_verified_products(
+  query_embedding text, model_name text, match_count integer default 8
+)
+returns table (
+  id uuid, sku text, name text, description text, price numeric, currency text,
+  stock_quantity integer, crops text[], conditions text[], recommended_uses text[],
+  evidence_source_url text, evidence_reviewed_at date, stock_verified_at date,
+  image_path text, similarity double precision
+)
+language sql stable security invoker
+set search_path = public, extensions
+as $$
+  select p.id, p.sku, p.name, p.description, p.price, p.currency,
+         p.stock_quantity, p.crops, p.conditions, p.recommended_uses,
+         p.evidence_source_url, p.evidence_reviewed_at, p.stock_verified_at,
+         p.image_path, 1 - (p.search_embedding <=> query_embedding::extensions.vector(768))
+  from public.shop_products p
+  where p.active and p.recommendation_eligible and p.stock_quantity > 0
+    and p.search_embedding is not null
+    and p.search_embedding_model = model_name
+  order by p.search_embedding <=> query_embedding::extensions.vector(768)
+  limit least(greatest(match_count, 0), 8);
+$$;
+
+create or replace function public.search_reviewed_guidance(
+  query_embedding text, model_name text, match_count integer default 8
+)
+returns table (
+  id uuid, source_url text, source_title text, source_organization text,
+  source_published_on date, reviewed_on date, topic text, crop text,
+  condition text, content text, similarity double precision
+)
+language sql stable security invoker
+set search_path = public, extensions
+as $$
+  select g.id, g.source_url, g.source_title, g.source_organization,
+         g.source_published_on, g.reviewed_on, g.topic, g.crop, g.condition,
+         g.content, 1 - (g.embedding <=> query_embedding::extensions.vector(768))
+  from public.agrilens_guidance_chunks g
+  where g.is_approved and g.embedding is not null
+    and g.embedding_model = model_name
+  order by g.embedding <=> query_embedding::extensions.vector(768)
+  limit least(greatest(match_count, 0), 8);
+$$;
+
+revoke all on function public.search_verified_products(text, text, integer) from public, anon;
+revoke all on function public.search_reviewed_guidance(text, text, integer) from public, anon;
+grant execute on function public.search_verified_products(text, text, integer) to authenticated;
+grant execute on function public.search_reviewed_guidance(text, text, integer) to authenticated;
 
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
 values ('agrilens-products', 'agrilens-products', true, 5242880,
@@ -226,6 +341,9 @@ create trigger shop_products_updated_at before update on public.shop_products
 drop trigger if exists shop_orders_updated_at on public.shop_orders;
 create trigger shop_orders_updated_at before update on public.shop_orders
   for each row execute function public.set_shop_updated_at();
+drop trigger if exists agrilens_guidance_updated_at on public.agrilens_guidance_chunks;
+create trigger agrilens_guidance_updated_at before update on public.agrilens_guidance_chunks
+  for each row execute function public.set_shop_updated_at();
 
 create index if not exists shop_orders_owner_created on public.shop_orders(owner_id, created_at desc);
 create index if not exists shop_order_items_order on public.shop_order_items(order_id);
@@ -298,3 +416,5 @@ $$;
 
 revoke all on function public.create_shop_order(jsonb, text, text, text) from public;
 grant execute on function public.create_shop_order(jsonb, text, text, text) to authenticated;
+
+notify pgrst, 'reload schema';

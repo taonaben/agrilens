@@ -1,20 +1,28 @@
 from __future__ import annotations
 
 import os
+import asyncio
 from contextlib import asynccontextmanager
+from datetime import date
 from typing import Literal
+from urllib.parse import quote
+from uuid import UUID
+import logging
 
 from dotenv import load_dotenv
-from fastapi import Depends, FastAPI, File, HTTPException, UploadFile
-from pydantic import BaseModel, Field
+from fastapi import Depends, FastAPI, File, Header, HTTPException, Request, UploadFile
+from pydantic import BaseModel, Field, model_validator
 from redis.asyncio import Redis
 
+from .ai_context import load_answer_context
 from .auth import require_user, router as auth_router
-from .gemini import GeminiUnavailable, generate_answer
+from .gemini import GeneratedAnswer, GeminiUnavailable, generate_answer
+from .guidance import router as guidance_router
 from .model import ModelContractError, Prediction, get_diagnosis_model
 from .shop import router as shop_router
-from .weather import router as weather_router
+from .weather import WeatherResponse, router as weather_router, weather_for_coordinates
 
+logger = logging.getLogger(__name__)
 
 load_dotenv()
 
@@ -35,6 +43,7 @@ app = FastAPI(title="AgriLens API", version="1.0.0", lifespan=lifespan)
 app.include_router(auth_router)
 app.include_router(shop_router)
 app.include_router(weather_router)
+app.include_router(guidance_router)
 
 
 class PredictionResponse(BaseModel):
@@ -60,10 +69,46 @@ class AnswerRequest(BaseModel):
     prediction: PredictionResponse
     prior_messages: list[Message] = Field(default_factory=list, max_length=20)
     user_follow_up: str | None = Field(default=None, max_length=4000)
+    latitude: float | None = Field(default=None, ge=-90, le=90)
+    longitude: float | None = Field(default=None, ge=-180, le=180)
+
+    @model_validator(mode="after")
+    def require_coordinate_pair(self) -> AnswerRequest:
+        if (self.latitude is None) != (self.longitude is None):
+            raise ValueError("latitude and longitude must be supplied together")
+        return self
+
+
+class ProductSuggestion(BaseModel):
+    id: UUID
+    sku: str
+    name: str
+    description: str
+    price: str
+    currency: str
+    stock_quantity: int
+    crops: list[str]
+    conditions: list[str]
+    recommended_uses: list[str]
+    evidence_source_url: str
+    evidence_reviewed_at: date
+    stock_verified_at: date
+    image_url: str | None = None
+
+
+class GuidanceCitation(BaseModel):
+    id: UUID
+    title: str
+    organization: str
+    url: str
+    published_on: date | None = None
+    reviewed_on: date
 
 
 class AnswerResponse(BaseModel):
     answer: str
+    products: list[ProductSuggestion] = Field(default_factory=list)
+    sources: list[GuidanceCitation] = Field(default_factory=list)
 
 
 @app.get("/health")
@@ -102,16 +147,103 @@ async def diagnose(
 
 @app.post("/v1/answers", response_model=AnswerResponse)
 async def answer(
+    http_request: Request,
     request: AnswerRequest,
     user_id: str = Depends(require_user),
+    authorization: str | None = Header(default=None),
 ):
     del user_id
+    bearer_token = (
+        authorization.split(" ", 1)[1].strip()
+        if authorization and authorization.lower().startswith("bearer ")
+        else ""
+    )
+    prediction = request.prediction.model_dump(mode="json")
+    prior_messages = [item.model_dump() for item in request.prior_messages]
+
+    context_task = load_answer_context(
+        bearer_token=bearer_token,
+        prediction=prediction,
+        prior_messages=prior_messages,
+        user_follow_up=request.user_follow_up,
+    )
+    weather_task = None
+    if request.latitude is not None and request.longitude is not None:
+        weather_task = weather_for_coordinates(
+            request.latitude,
+            request.longitude,
+            getattr(http_request.app.state, "weather_redis", None),
+        )
+    if weather_task is not None:
+        context, weather_result = await asyncio.gather(
+            context_task, weather_task, return_exceptions=True
+        )
+        if isinstance(context, BaseException) and not isinstance(context, Exception):
+            raise context
+        if isinstance(weather_result, BaseException) and not isinstance(weather_result, Exception):
+            raise weather_result
+        if isinstance(context, Exception):
+            logger.warning("AI context lookup failed: %s", context)
+            context = {"products": [], "guidance": []}
+        if isinstance(weather_result, WeatherResponse):
+            weather_data = weather_result.model_dump(mode="json")
+        else:
+            if isinstance(weather_result, Exception):
+                logger.warning("Weather context lookup failed")
+            weather_data = None
+    else:
+        context = await context_task
+        weather_data = None
+
+    product_candidates = context.get("products", [])
+    guidance_candidates = context.get("guidance", [])
     try:
-        text = await generate_answer(
-            prediction=request.prediction.model_dump(),
-            prior_messages=[item.model_dump() for item in request.prior_messages],
+        generated: GeneratedAnswer = await generate_answer(
+            prediction=prediction,
+            prior_messages=prior_messages,
             user_follow_up=request.user_follow_up,
+            weather=weather_data,
+            guidance=guidance_candidates,
+            products=product_candidates,
         )
     except GeminiUnavailable as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
-    return AnswerResponse(answer=text)
+
+    # Only hydrate identifiers from this request's verified search results.
+    products_by_id = {str(item.get("id")): item for item in product_candidates}
+    guidance_by_id = {str(item.get("id")): item for item in guidance_candidates}
+    selected_products: list[ProductSuggestion] = []
+    if prediction["decision_state"] == "possible_match":
+        for product_id in dict.fromkeys(generated.product_ids):
+            product = products_by_id.get(product_id)
+            if product is None:
+                continue
+            base = os.getenv("SUPABASE_URL", "").rstrip("/")
+            image_path = product.get("image_path")
+            image_url = (
+                f"{base}/storage/v1/object/public/agrilens-products/{quote(str(image_path), safe='/')}"
+                if base and image_path else None
+            )
+            selected_products.append(ProductSuggestion(
+                id=product["id"], sku=product["sku"], name=product["name"],
+                description=product.get("description", ""), price=str(product["price"]),
+                currency=product["currency"], stock_quantity=product["stock_quantity"],
+                crops=product.get("crops") or [], conditions=product.get("conditions") or [],
+                recommended_uses=product.get("recommended_uses") or [],
+                evidence_source_url=product["evidence_source_url"],
+                evidence_reviewed_at=product["evidence_reviewed_at"],
+                stock_verified_at=product["stock_verified_at"], image_url=image_url,
+            ))
+
+    selected_sources: list[GuidanceCitation] = []
+    for source_id in dict.fromkeys(generated.source_ids):
+        source = guidance_by_id.get(source_id)
+        if source is not None:
+            selected_sources.append(GuidanceCitation(
+                id=source["id"], title=source["source_title"],
+                organization=source["source_organization"], url=source["source_url"],
+                published_on=source.get("source_published_on"), reviewed_on=source["reviewed_on"],
+            ))
+    return AnswerResponse(
+        answer=generated.answer.strip(), products=selected_products, sources=selected_sources
+    )
