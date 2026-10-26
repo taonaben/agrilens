@@ -318,11 +318,47 @@ class SmartAnswerTests(unittest.IsolatedAsyncioTestCase):
                 weather=context["weather"], guidance=context["guidance"], products=context["products"],
             )
         call = fake_client.aio.client.models.generate_content.await_args
-        self.assertIn("temperature_c", call.kwargs["contents"])
-        self.assertIn(PRODUCT_ID, call.kwargs["contents"])
-        self.assertIn(SOURCE_ID, call.kwargs["contents"])
+        prompt = call.kwargs["contents"]
+        self.assertIn("temperature_c", prompt)
+        self.assertIn("forecast", prompt)
+        self.assertIn(PRODUCT_ID, prompt)
+        self.assertIn(SOURCE_ID, prompt)
+        self.assertIn("plausible causes", call.kwargs["config"].system_instruction)
+        self.assertIn("naturally name any selected product", prompt)
+        self.assertNotIn("confidence=0.700", prompt)
         self.assertEqual(call.kwargs["config"].response_mime_type, "application/json")
         self.assertEqual(generated.answer, "Rain is forecast soon.")
+
+    async def test_gemini_includes_model_score_only_when_farmer_asks(self):
+        response = SimpleNamespace(
+            candidates=[],
+            parsed=None,
+            text='{"answer":"The model score is 70%, but it is not a certainty.","product_ids":[],"source_ids":[]}',
+        )
+
+        class FakeAsyncClient:
+            def __init__(self):
+                self.models = SimpleNamespace(generate_content=AsyncMock(return_value=response))
+
+        class FakeAio:
+            async def __aenter__(self):
+                self.client = FakeAsyncClient()
+                return self.client
+
+            async def __aexit__(self, *_args):
+                return None
+
+        fake_client = SimpleNamespace(aio=FakeAio())
+        with patch.dict(os.environ, {"GEMINI_API_KEY": "test-key"}), patch(
+            "app.gemini.genai.Client", return_value=fake_client
+        ):
+            await generate_answer(
+                prediction=_prediction(), prior_messages=[],
+                user_follow_up="What is the confidence score?",
+            )
+        prompt = fake_client.aio.client.models.generate_content.await_args.kwargs["contents"]
+        self.assertIn("model confidence score=0.800", prompt)
+        self.assertIn("model margin=0.300", prompt)
 
     async def test_gemini_text_only_prompt_does_not_claim_image_analysis(self):
         response = SimpleNamespace(candidates=[], parsed=None,

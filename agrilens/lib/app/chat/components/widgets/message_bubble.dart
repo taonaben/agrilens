@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:agrilens/app/chat/components/widgets/prediction_card.dart';
+import 'package:agrilens/app/chat/components/widgets/suggested_product_card.dart';
 import 'package:agrilens/app/chat/models/message.dart';
 import 'package:agrilens/app/chat/models/prediction.dart';
 import 'package:agrilens/shared/components/custom_progress_indicator.dart';
@@ -133,21 +134,7 @@ class MessageBubble extends StatelessWidget {
                     ),
                   ),
                 for (final product in answerMetadata!.products)
-                  Card(
-                    child: ListTile(
-                      leading: const Icon(SolarIconsOutline.shop),
-                      title: Text(product.name),
-                      subtitle: Text(
-                        '${product.description}\n${product.currency} ${product.price}',
-                      ),
-                      isThreeLine: true,
-                      trailing: IconButton(
-                        tooltip: 'View product evidence',
-                        onPressed: () => _openUrl(product.evidenceUrl),
-                        icon: const Icon(SolarIconsOutline.link),
-                      ),
-                    ),
-                  ),
+                  SuggestedProductCard(suggestion: product),
               ],
               if (message.lifecycle == MessageLifecycle.pending) ...[
                 const Gap(AppConstants.gapSmall),

@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:dio/dio.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:agrilens/app/shop/models/product_model.dart';
 
 import '../../../shared/api/api_client.dart';
 import '../models/conversation.dart';
@@ -28,29 +29,64 @@ class AnswerSource {
 
 class SuggestedProduct {
   const SuggestedProduct({
+    this.id,
+    this.sku,
     required this.name,
     required this.description,
     required this.price,
     required this.currency,
     required this.evidenceUrl,
     this.imageUrl,
+    this.stockQuantity,
+    this.crops = const [],
+    this.conditions = const [],
   });
   final String name;
+  final String? id;
+  final String? sku;
   final String description;
   final String price;
   final String currency;
   final String evidenceUrl;
   final String? imageUrl;
+  final int? stockQuantity;
+  final List<String> crops;
+  final List<String> conditions;
 
   factory SuggestedProduct.fromJson(Map<String, dynamic> json) =>
       SuggestedProduct(
+        id: json['id'] as String?,
+        sku: json['sku'] as String?,
         name: json['name'] as String? ?? '',
         description: json['description'] as String? ?? '',
         price: json['price']?.toString() ?? '',
         currency: json['currency'] as String? ?? '',
         evidenceUrl: json['evidence_source_url'] as String? ?? '',
         imageUrl: json['image_url'] as String?,
+        stockQuantity: (json['stock_quantity'] as num?)?.toInt(),
+        crops:
+            (json['crops'] as List<dynamic>? ?? const [])
+                .whereType<String>()
+                .toList(),
+        conditions:
+            (json['conditions'] as List<dynamic>? ?? const [])
+                .whereType<String>()
+                .toList(),
       );
+
+  Product toProduct() => Product(
+    id: id,
+    sku: sku,
+    name: name,
+    description: description,
+    price: double.tryParse(price),
+    currency: currency,
+    stockQuantity: stockQuantity,
+    crops: crops,
+    conditions: conditions,
+    active: true,
+    imageUrl: imageUrl,
+  );
 }
 
 class AnswerMetadata {

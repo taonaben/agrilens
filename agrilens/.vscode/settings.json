@@ -1,5 +1,6 @@
 {
     "chat.tools.terminal.autoApprove": {
         "dart": true
-    }
+    },
+    "postman.settings.dotenv-detection-notification-visibility": false
 }
