@@ -7,7 +7,7 @@ import '../../app/chat/services/local_llm_service.dart'
 import '../../app/chat/services/service_interfaces.dart';
 
 class BackendLlmService implements LlmServiceInterface {
-  final BackendApiClient _api;
+  final ApiClient _api;
   CancelToken? _activeRequest;
   bool _disposed = false;
 
@@ -45,7 +45,7 @@ class BackendLlmService implements LlmServiceInterface {
       }
       onChunk?.call(LlmChunk(text));
       return LlmSuccess(text);
-    } on BackendRequestException catch (error) {
+    } on ApiRequestException catch (error) {
       return LlmError(error.message);
     } on DioException catch (error) {
       if (CancelToken.isCancel(error)) return const LlmCancelled();

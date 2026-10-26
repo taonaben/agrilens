@@ -4,6 +4,8 @@ import 'package:agrilens/app/chat/data/message_repository.dart';
 import 'package:agrilens/app/chat/data/prediction_repository.dart';
 import 'package:agrilens/app/chat/models/conversation.dart' as model;
 import 'package:agrilens/app/chat/services/diagnosis_pipeline.dart';
+import 'package:agrilens/app/auth/services/auth_session.dart';
+import 'package:agrilens/app/shop/views/shop_page.dart';
 import 'package:agrilens/shared/api/api_client.dart';
 import 'package:agrilens/shared/services/backend_diagnosis_service.dart';
 import 'package:agrilens/shared/services/backend_llm_service.dart';
@@ -11,11 +13,9 @@ import 'package:agrilens/app/chat/views/chat_page.dart';
 import 'package:agrilens/shared/theme/app_colors.dart';
 import 'package:agrilens/shared/utils/app_constants.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:gap/gap.dart';
 import 'package:sidebarx/sidebarx.dart';
 import 'package:solar_icons/solar_icons.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 
 class _Destination {
   const _Destination({
@@ -38,9 +38,9 @@ const _mainPages = <_Destination>[
     pageLabel: 'Chat page',
   ),
   _Destination(
-    title: 'Store',
+    title: 'Shop',
     icon: SolarIconsOutline.shop,
-    pageLabel: 'Store page',
+    pageLabel: 'Shop page',
   ),
   _Destination(
     title: 'Weather',
@@ -50,7 +50,10 @@ const _mainPages = <_Destination>[
 ];
 
 class App extends StatefulWidget {
-  const App({super.key});
+  const App({super.key, required this.apiClient, required this.authSession});
+
+  final ApiClient apiClient;
+  final AuthSession authSession;
 
   @override
   State<App> createState() => _AppState();
@@ -85,13 +88,8 @@ class _AppState extends State<App> {
     _conversationRepo = ConversationRepository(_database);
     _messageRepo = MessageRepository(_database);
     _predictionRepo = PredictionRepository(_database);
-    final api = BackendApiClient.ApiClient(
-      accessTokenProvider:
-          () async => Supabase.instance.client.auth.currentSession?.accessToken,
-      baseUrl: dotenv.env['API_BASE_URL'],
-    );
-    _diagnosisService = BackendDiagnosisService(api);
-    _llmService = BackendLlmService(api);
+    _diagnosisService = BackendDiagnosisService(widget.apiClient);
+    _llmService = BackendLlmService(widget.apiClient);
     _pipeline = DiagnosisPipeline(
       diagnosisService: _diagnosisService,
       llmService: _llmService,
@@ -215,6 +213,8 @@ class _AppState extends State<App> {
     required int selectedIndex,
     required String pageLabel,
   }) {
+    if (selectedIndex == 1) return const ShopPage();
+
     if (_initializing) {
       return const Center(child: CircularProgressIndicator());
     }
@@ -279,10 +279,9 @@ class _AppState extends State<App> {
                   style: Theme.of(context).textTheme.headlineSmall,
                 ),
                 const SizedBox(height: 8),
-                Text(Supabase.instance.client.auth.currentUser?.email ?? ''),
                 const SizedBox(height: 20),
                 FilledButton(
-                  onPressed: () => Supabase.instance.client.auth.signOut(),
+                  onPressed: widget.authSession.signOut,
                   child: const Text('Sign out'),
                 ),
               ],

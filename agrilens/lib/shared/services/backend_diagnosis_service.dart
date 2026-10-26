@@ -6,7 +6,7 @@ import '../../app/chat/services/diagnosis_result.dart';
 import '../../app/chat/services/service_interfaces.dart';
 
 class BackendDiagnosisService implements DiagnosisServiceInterface {
-  final BackendApiClient _api;
+  final ApiClient _api;
   CancelToken? _activeRequest;
 
   BackendDiagnosisService(this._api);
@@ -38,7 +38,7 @@ class BackendDiagnosisService implements DiagnosisServiceInterface {
         cancelToken: _activeRequest,
       );
       return _parsePrediction(json);
-    } on BackendRequestException catch (error) {
+    } on ApiRequestException catch (error) {
       final kind =
           error.message.contains('decode') || error.message.contains('image')
               ? DiagnosisFailureKind.imageDecodeFailed
