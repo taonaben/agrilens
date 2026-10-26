@@ -5,6 +5,9 @@ import csv
 import hmac
 import ipaddress
 import io
+import json
+import logging
+import math
 import os
 import re
 import socket
@@ -19,9 +22,10 @@ from fastapi import APIRouter, Depends, File, Header, HTTPException, UploadFile
 from pydantic import BaseModel, Field, field_validator, model_validator
 
 from .auth import require_user
-from .embeddings import EmbeddingUnavailable, embed_texts
+from .embeddings import EMBEDDING_DIMENSIONS, EmbeddingUnavailable, embed_text, embed_texts
 
 router = APIRouter(prefix="/v1", tags=["shop"])
+logger = logging.getLogger(__name__)
 
 
 def _supabase() -> tuple[str, str]:
@@ -106,6 +110,136 @@ def _product_response(row: dict[str, Any]) -> dict[str, Any]:
     result.pop("search_embedding_model", None)
     result["image_url"] = _public_product_image_url(result.pop("image_path", None))
     return result
+
+
+def _parse_embedding(value: Any) -> list[float] | None:
+    if isinstance(value, list):
+        parsed = value
+    elif isinstance(value, str):
+        text = value.strip()
+        if not text:
+            return None
+        try:
+            loaded = json.loads(text)
+        except ValueError:
+            return None
+        if not isinstance(loaded, list):
+            return None
+        parsed = loaded
+    else:
+        return None
+    if len(parsed) != EMBEDDING_DIMENSIONS:
+        return None
+    try:
+        vector = [float(item) for item in parsed]
+    except (TypeError, ValueError):
+        return None
+    if not any(vector):
+        return None
+    return vector
+
+
+def _cosine_similarity(left: list[float], right: list[float]) -> float:
+    dot = 0.0
+    left_norm_sq = 0.0
+    right_norm_sq = 0.0
+    for left_value, right_value in zip(left, right):
+        dot += left_value * right_value
+        left_norm_sq += left_value * left_value
+        right_norm_sq += right_value * right_value
+    if left_norm_sq <= 0 or right_norm_sq <= 0:
+        return -1.0
+    return dot / math.sqrt(left_norm_sq * right_norm_sq)
+
+
+def _personalization_profile(
+    *,
+    predictions: list[dict[str, Any]],
+    orders: list[dict[str, Any]],
+) -> str:
+    lines: list[str] = []
+    for prediction in predictions[:12]:
+        crop = str(prediction.get("crop") or "").strip().lower()
+        condition = str(prediction.get("condition") or "").strip().lower()
+        decision_state = str(prediction.get("decision_state") or "").strip()
+        if not (crop or condition):
+            continue
+        lines.append(
+            "Scanned leaf context: "
+            f"crop={crop or 'unknown'}, "
+            f"condition={condition or 'unknown'}, "
+            f"decision_state={decision_state or 'unknown'}"
+        )
+    for order in orders[:10]:
+        for item in (order.get("shop_order_items") or [])[:12]:
+            name = str(item.get("name_snapshot") or "").strip()
+            sku = str(item.get("sku_snapshot") or "").strip()
+            quantity = item.get("quantity")
+            if not (name or sku):
+                continue
+            lines.append(
+                "Previous order context: "
+                f"product={name or sku}, sku={sku or 'unknown'}, quantity={quantity}"
+            )
+    return "\n".join(lines).strip()
+
+
+async def _personalize_product_rows(
+    *,
+    rows: list[dict[str, Any]],
+    token: str,
+) -> list[dict[str, Any]]:
+    if not rows:
+        return rows
+    prediction_rows, order_rows = await asyncio.gather(
+        _rest("agrilens_predictions", user_token=token, params={
+            "select": "crop,condition,decision_state,created_at",
+            "order": "created_at.desc",
+            "limit": "20",
+        }),
+        _rest("shop_orders", user_token=token, params={
+            "select": "id,created_at,shop_order_items(name_snapshot,sku_snapshot,quantity)",
+            "order": "created_at.desc",
+            "limit": "10",
+        }),
+        return_exceptions=True,
+    )
+    if isinstance(prediction_rows, asyncio.CancelledError):
+        raise prediction_rows
+    if isinstance(order_rows, asyncio.CancelledError):
+        raise order_rows
+    predictions = prediction_rows if isinstance(prediction_rows, list) else []
+    if isinstance(prediction_rows, Exception):
+        logger.warning("Shop personalization skipped prediction context: %s", prediction_rows)
+    orders = order_rows if isinstance(order_rows, list) else []
+    if isinstance(order_rows, Exception):
+        logger.warning("Shop personalization skipped order context: %s", order_rows)
+    profile = _personalization_profile(
+        predictions=[row for row in predictions if isinstance(row, dict)],
+        orders=[row for row in orders if isinstance(row, dict)],
+    )
+    if not profile:
+        return rows
+    try:
+        profile_embedding = await embed_text(profile)
+    except (EmbeddingUnavailable, ValueError) as exc:
+        logger.warning("Shop personalization embedding unavailable: %s", exc)
+        return rows
+    scored: list[tuple[int, float]] = []
+    for index, row in enumerate(rows):
+        embedding = _parse_embedding(row.get("search_embedding"))
+        if embedding is None:
+            continue
+        scored.append((index, _cosine_similarity(profile_embedding, embedding)))
+    if not scored:
+        return rows
+    scored.sort(key=lambda item: item[1], reverse=True)
+    ranked_indexes = [index for index, _ in scored]
+    ranked_index_set = set(ranked_indexes)
+    ranked_indexes.extend(
+        index for index in range(len(rows)) if index not in ranked_index_set
+    )
+    return [rows[index] for index in ranked_indexes]
 
 
 async def _validate_public_image_url(value: str) -> None:
@@ -428,7 +562,11 @@ async def list_products(user_id: str = Depends(require_user), authorization: str
     token = _bearer_token(authorization)
     rows = await _rest("shop_products", user_token=token,
                        params={"select": "*", "active": "eq.true", "order": "name.asc"})
-    return [_product_response(row) for row in rows or []]
+    personalized_rows = await _personalize_product_rows(
+        rows=[row for row in rows or [] if isinstance(row, dict)],
+        token=token,
+    )
+    return [_product_response(row) for row in personalized_rows]
 
 
 def _bearer_token(authorization: str | None = Header(default=None)) -> str:

@@ -39,7 +39,7 @@ Authenticated requests use `Authorization: Bearer <Supabase access token>`. The 
 ### Shop API
 
 - `POST /v1/history/sync`: legacy authenticated upsert of conversations, messages, and predictions. The server assigns the authenticated owner ID; the Chat app no longer calls this route.
-- `GET /v1/products`: authenticated list of active products.
+- `GET /v1/products`: authenticated list of active products, ranked by semantic relevance from the signed-in farmer's recent scan context and prior order history when enough context and embeddings are available; otherwise it falls back to name ordering.
 - `POST /v1/products`: add a product using the `X-Shop-Admin-Token` header. Include optional `image_url` to download a product image into Supabase Storage.
 - `DELETE /v1/products/{product_id}`: deactivate a product using the operator token. Existing order snapshots remain intact.
 - `POST /v1/products/import`: import CSV using the operator token. Required headers are `sku,name,description,price,currency,stock_quantity,crops,conditions`; separate list values with `|`. Optional AI-evidence headers are `recommended_uses,evidence_source_url,evidence_reviewed_at,stock_verified_at,recommendation_eligible`; an optional `image_url` supplies a product image. Set `recommendation_eligible=true` only after verifying the product use, evidence URL, review date, and stock. Existing demo rows remain ineligible until reimported with verified data.
