@@ -34,6 +34,48 @@ class MessageBubble extends StatelessWidget {
             ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.12)
             : AppColors.surfaceAlt(brightness);
 
+    if (message.contentType == MessageContentType.image) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: AppConstants.gapSmall),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Align(
+              alignment: Alignment.centerRight,
+              child: ConstrainedBox(
+                constraints: BoxConstraints(
+                  maxWidth: MediaQuery.sizeOf(context).width < 600 ? 260 : 340,
+                ),
+                child: Container(
+                  padding: const EdgeInsets.all(7),
+                  decoration: BoxDecoration(
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.primary.withValues(alpha: 0.14),
+                    borderRadius: BorderRadius.circular(22),
+                  ),
+                  child: _attachedImage(context, message),
+                ),
+              ),
+            ),
+            if (prediction != null) ...[
+              const Gap(AppConstants.gapSmall),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(
+                    maxWidth:
+                        MediaQuery.sizeOf(context).width < 600 ? 320 : 560,
+                  ),
+                  child: PredictionCard(prediction: prediction!),
+                ),
+              ),
+            ],
+          ],
+        ),
+      );
+    }
+
     return Align(
       alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
       child: ConstrainedBox(
@@ -42,53 +84,19 @@ class MessageBubble extends StatelessWidget {
         ),
         child: Container(
           margin: const EdgeInsets.symmetric(vertical: AppConstants.gapSmall),
-          padding:
-              isUser
-                  ? const EdgeInsets.symmetric(
-                    horizontal: AppConstants.paddingMedium,
-                    vertical: AppConstants.paddingSmall,
-                  )
-                  : EdgeInsets.zero,
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppConstants.paddingMedium,
+            vertical: AppConstants.paddingSmall,
+          ),
           decoration: BoxDecoration(
-            color: isUser ? bubbleColor : Colors.transparent,
+            color: isUser ? bubbleColor : AppColors.surfaceRaised(brightness),
             borderRadius: BorderRadius.circular(AppConstants.borderRadiusLarge),
+            border:
+                isUser ? null : Border.all(color: AppColors.border(brightness)),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              if (message.contentType == MessageContentType.image) ...[
-                if (message.localImagePath case final imagePath?)
-                  GestureDetector(
-                    onTap: () => _showImagePreview(context, imagePath),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(
-                        AppConstants.borderRadiusMedium,
-                      ),
-                      child: Image.file(
-                        File(imagePath),
-                        width: 260,
-                        height: 220,
-                        fit: BoxFit.contain,
-                        errorBuilder:
-                            (context, error, stackTrace) => Container(
-                              width: 220,
-                              height: 100,
-                              color: AppColors.surfaceAlt(brightness),
-                              alignment: Alignment.center,
-                              child: const Text('Image unavailable'),
-                            ),
-                      ),
-                    ),
-                  )
-                else
-                  Text(
-                    'Leaf image unavailable',
-                    style: Theme.of(context).textTheme.bodySmall,
-                  ),
-              ],
-              if (message.contentType == MessageContentType.image &&
-                  message.textContent?.trim().isNotEmpty == true)
-                Text(message.textContent!.trim()),
               if (message.contentType == MessageContentType.text &&
                   (message.textContent?.trim().isNotEmpty ?? false))
                 if (isUser)
@@ -164,6 +172,30 @@ class MessageBubble extends StatelessWidget {
                 ),
               ],
             ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _attachedImage(BuildContext context, MessageModel imageMessage) {
+    final path = imageMessage.localImagePath;
+    if (path == null) return const Text('Leaf image unavailable');
+    return GestureDetector(
+      onTap: () => _showImagePreview(context, path),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(18),
+        child: AspectRatio(
+          aspectRatio: 0.92,
+          child: Image.file(
+            File(path),
+            fit: BoxFit.cover,
+            errorBuilder:
+                (context, error, stackTrace) => Container(
+                  color: AppColors.surfaceAlt(Theme.of(context).brightness),
+                  alignment: Alignment.center,
+                  child: const Text('Image unavailable'),
+                ),
           ),
         ),
       ),

@@ -12,12 +12,14 @@ class ChatMessageList extends StatelessWidget {
     required this.isLoading,
     required this.messages,
     required this.predictionsByMessageId,
+    this.controller,
     this.answersByMessageId = const {},
   });
 
   final bool isLoading;
   final List<MessageModel> messages;
   final Map<String, Prediction> predictionsByMessageId;
+  final ScrollController? controller;
   final Map<String, AnswerMetadata> answersByMessageId;
 
   @override
@@ -40,13 +42,16 @@ class ChatMessageList extends StatelessWidget {
     }
 
     return ListView.builder(
+      controller: controller,
+      reverse: true,
       padding: const EdgeInsets.symmetric(
         horizontal: AppConstants.paddingMedium,
         vertical: AppConstants.paddingSmall,
       ),
       itemCount: messages.length,
       itemBuilder: (context, index) {
-        final message = messages[index];
+        final chronologicalIndex = messages.length - 1 - index;
+        final message = messages[chronologicalIndex];
         return MessageBubble(
           message: message,
           prediction: predictionsByMessageId[message.id],

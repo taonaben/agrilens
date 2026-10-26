@@ -6,16 +6,18 @@ import 'package:agrilens/app/chat/components/widgets/chat_composer.dart';
 import 'package:agrilens/app/chat/components/widgets/chat_message_list.dart';
 import 'package:agrilens/app/chat/components/widgets/chat_status_banner.dart';
 import 'package:agrilens/app/chat/components/widgets/pending_image_preview_card.dart';
+import 'package:agrilens/app/chat/providers/chat_cache_provider.dart';
 import 'package:agrilens/app/chat/services/remote_chat_service.dart';
 import 'package:agrilens/shared/api/api_client.dart';
 import 'package:agrilens/app/chat/models/message.dart';
 import 'package:agrilens/app/chat/models/prediction.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:solar_icons/solar_icons.dart';
 
-class ChatPage extends StatefulWidget {
+class ChatPage extends ConsumerStatefulWidget {
   const ChatPage({
     super.key,
     required this.chatService,
@@ -34,10 +36,10 @@ class ChatPage extends StatefulWidget {
   final String? serviceWarning;
 
   @override
-  State<ChatPage> createState() => _ChatPageState();
+  ConsumerState<ChatPage> createState() => _ChatPageState();
 }
 
-class _ChatPageState extends State<ChatPage> {
+class _ChatPageState extends ConsumerState<ChatPage> {
   final _messageController = TextEditingController();
   final _picker = ImagePicker();
   bool _loadingConversation = true;
@@ -49,10 +51,16 @@ class _ChatPageState extends State<ChatPage> {
   List<MessageModel> _messages = const [];
   final Map<String, Prediction> _predictionsByMessageId = {};
   final Map<String, AnswerMetadata> _answersByMessageId = {};
+  final _scrollController = ScrollController();
 
   @override
   void initState() {
     super.initState();
+    final cached = ref.read(chatSnapshotCacheProvider)[widget.conversationId];
+    if (cached != null) {
+      _applySnapshot(cached);
+      _loadingConversation = false;
+    }
     _reloadConversation();
   }
 
@@ -64,6 +72,16 @@ class _ChatPageState extends State<ChatPage> {
       _pendingImagePath = null;
       _inlineError = null;
       _loadError = null;
+      final cached = ref.read(chatSnapshotCacheProvider)[widget.conversationId];
+      if (cached != null) {
+        _applySnapshot(cached);
+        _loadingConversation = false;
+      } else {
+        _messages = const [];
+        _predictionsByMessageId.clear();
+        _answersByMessageId.clear();
+        _loadingConversation = true;
+      }
       _reloadConversation();
     }
   }
@@ -71,12 +89,15 @@ class _ChatPageState extends State<ChatPage> {
   @override
   void dispose() {
     _messageController.dispose();
+    _scrollController.dispose();
     super.dispose();
   }
 
   Future<void> _reloadConversation() async {
+    final cached = ref.read(chatSnapshotCacheProvider)[widget.conversationId];
     setState(() {
-      _loadingConversation = true;
+      // Retain cached messages while refreshing so the chat never blanks out.
+      _loadingConversation = cached == null;
       _loadError = null;
     });
     try {
@@ -84,23 +105,45 @@ class _ChatPageState extends State<ChatPage> {
         widget.conversationId,
       );
       if (!mounted) return;
+      ref
+          .read(chatSnapshotCacheProvider.notifier)
+          .update((cache) => {...cache, widget.conversationId: snapshot});
       setState(() {
-        _messages = snapshot.messages;
-        _predictionsByMessageId
-          ..clear()
-          ..addAll(snapshot.predictions);
-        _answersByMessageId
-          ..clear()
-          ..addAll(snapshot.answers);
+        _applySnapshot(snapshot);
         _loadingConversation = false;
       });
+      _scrollToLatest();
     } catch (error) {
       if (!mounted) return;
       setState(() {
         _loadingConversation = false;
-        _loadError = error.toString();
+        // Keep a usable cached conversation visible if refresh fails.
+        _loadError = cached == null ? error.toString() : null;
+        if (cached != null) _inlineError = error.toString();
       });
     }
+  }
+
+  void _applySnapshot(RemoteConversationSnapshot snapshot) {
+    _messages = snapshot.messages;
+    _predictionsByMessageId
+      ..clear()
+      ..addAll(snapshot.predictions);
+    _answersByMessageId
+      ..clear()
+      ..addAll(snapshot.answers);
+  }
+
+  void _scrollToLatest() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_scrollController.hasClients) {
+        _scrollController.animateTo(
+          0,
+          duration: const Duration(milliseconds: 220),
+          curve: Curves.easeOut,
+        );
+      }
+    });
   }
 
   Future<void> _newConversation() async {
@@ -238,11 +281,40 @@ class _ChatPageState extends State<ChatPage> {
   Future<void> _sendFollowUp() async {
     final text = _messageController.text.trim();
     if (text.isEmpty) return;
+    final now = DateTime.now();
+    final pending = MessageModel(
+      id: 'pending-${now.microsecondsSinceEpoch}',
+      conversationId: widget.conversationId,
+      role: MessageRole.user,
+      contentType: MessageContentType.text,
+      textContent: text,
+      lifecycle: MessageLifecycle.pending,
+      createdAt: now,
+      updatedAt: now,
+    );
     setState(() {
+      _messages = [..._messages, pending];
       _busy = true;
       _busyLabel = 'Thinking...';
       _inlineError = null;
     });
+    final cached = ref.read(chatSnapshotCacheProvider)[widget.conversationId];
+    if (cached != null) {
+      ref
+          .read(chatSnapshotCacheProvider.notifier)
+          .update(
+            (cache) => {
+              ...cache,
+              widget.conversationId: RemoteConversationSnapshot(
+                conversation: cached.conversation,
+                messages: _messages,
+                predictions: cached.predictions,
+                answers: cached.answers,
+              ),
+            },
+          );
+    }
+    _scrollToLatest();
     try {
       await widget.chatService.ask(widget.conversationId, text);
       _messageController.clear();
@@ -322,6 +394,7 @@ class _ChatPageState extends State<ChatPage> {
                   messages: _messages,
                   predictionsByMessageId: _predictionsByMessageId,
                   answersByMessageId: _answersByMessageId,
+                  controller: _scrollController,
                 )
                 : Center(
                   child: Padding(

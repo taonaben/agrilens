@@ -12,7 +12,6 @@ class PredictionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final brightness = Theme.of(context).brightness;
     final isHealthy = prediction.condition == 'healthy';
     final conditionName = titleCaseFromSnake(prediction.condition);
     final cropName = titleCaseFromSnake(prediction.crop);
@@ -40,21 +39,27 @@ class PredictionCard extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(AppConstants.paddingMedium),
       decoration: BoxDecoration(
-        color: AppColors.surfaceAlt(brightness),
+        color: AppColors.primary,
         borderRadius: BorderRadius.circular(AppConstants.borderRadiusMedium),
-        border: Border.all(color: AppColors.border(brightness)),
+        border: Border.all(color: AppColors.primaryDark),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             summary.headline,
-            style: Theme.of(
-              context,
-            ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+            style: Theme.of(context).textTheme.titleSmall?.copyWith(
+              fontWeight: FontWeight.w700,
+              color: AppColors.onPrimary,
+            ),
           ),
           const Gap(AppConstants.gapSmall),
-          Text(summary.details, style: Theme.of(context).textTheme.bodySmall),
+          Text(
+            summary.details,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              color: AppColors.onPrimary.withValues(alpha: 0.92),
+            ),
+          ),
         ],
       ),
     );
