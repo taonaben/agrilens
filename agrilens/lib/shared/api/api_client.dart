@@ -193,6 +193,20 @@ class ApiClient {
     if (data is Map) {
       final detail = data['detail'];
       if (detail is String && detail.isNotEmpty) return detail;
+      if (detail is List) {
+        final validationErrors = <String>[];
+        for (final issue in detail) {
+          if (issue is! Map) continue;
+          final location = issue['loc'];
+          final message = issue['msg'];
+          if (message is! String || message.isEmpty) continue;
+          final field = location is Iterable ? location.skip(1).join('.') : '';
+          validationErrors.add(field.isEmpty ? message : '$field: $message');
+        }
+        if (validationErrors.isNotEmpty) {
+          return 'Please check: ${validationErrors.join('; ')}';
+        }
+      }
     }
     return switch (error.type) {
       DioExceptionType.connectionTimeout ||

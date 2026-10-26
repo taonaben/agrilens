@@ -61,6 +61,7 @@ dependencies:
   tflite_flutter: ^0.12.1
   image_picker: ^1.1.2
   url_launcher: ^6.3.2
+  cached_network_image: ^3.4.1
 
 
 dev_dependencies:
