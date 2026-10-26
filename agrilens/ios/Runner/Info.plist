@@ -47,6 +47,8 @@
 	<true/>
 	<key>NSCameraUsageDescription</key>
 	<string>AgriLens needs camera access so you can capture a leaf photo for diagnosis.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>AgriLens uses your approximate location to show local weather forecasts.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>AgriLens needs photo library access so you can choose a leaf photo for diagnosis.</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>

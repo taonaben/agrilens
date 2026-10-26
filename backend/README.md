@@ -25,7 +25,9 @@ The deployed service must be given `agrilens_model.tflite` and the three version
 - `POST /auth/login`: JSON `{ "email": "...", "password": "..." }`; returns the Supabase Auth session, including the access token Flutter sends as a bearer token to protected endpoints.
 - `POST /v1/diagnoses`: multipart `image` upload; returns the typed prediction and score evidence.
 - `POST /v1/answers`: JSON classifier evidence, recent turns, optional follow-up, and optional `latitude` plus `longitude`; returns `answer`, model-selected `products`, and cited `sources`. Existing clients can continue reading `answer`; location remains optional.
-- `GET /v1/weather?lat=…&lon=…`: authenticated current weather and five-day forecast at three-hour intervals, normalized to metric units. Requires `OPENWEATHER_API_KEY`. Current conditions are cached in Redis for 10 minutes and forecast data for 30 minutes; cache keys use coordinates rounded to three decimal places. Location is not persisted.
+- `GET /v1/weather/current?lat=…&lon=…`: authenticated current conditions plus forecast periods over the next 24 hours.
+- `GET /v1/weather/forecast?lat=…&lon=…`: authenticated five-day forecast in three-hour intervals.
+- Both weather endpoints return metric units and require `OPENWEATHER_API_KEY`. Current conditions are cached in Redis for 10 minutes and forecast data for 30 minutes; cache keys use coordinates rounded to three decimal places. Location is not persisted. The combined `GET /v1/weather` route remains available for compatibility.
 
 Authenticated requests use `Authorization: Bearer <Supabase access token>`. The backend verifies the token with Supabase Auth. Apply or reapply `supabase/schema.sql` in the Supabase SQL editor to provision owner-scoped history, shop tables, pgvector search, RLS policies, and the private photo bucket. Flutter must call FastAPI only.
 

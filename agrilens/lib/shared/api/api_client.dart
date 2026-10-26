@@ -156,6 +156,36 @@ class ApiClient {
     }
   }
 
+  Future<Map<String, dynamic>> getJson(
+    String path, {
+    Map<String, dynamic>? queryParameters,
+    CancelToken? cancelToken,
+  }) async {
+    try {
+      if ((await _accessTokenProvider?.call())?.isNotEmpty != true) {
+        throw const ApiRequestException('Sign in to use local weather.');
+      }
+    } on ApiRequestException {
+      rethrow;
+    } catch (error) {
+      throw ApiRequestException(
+        'Could not read the saved sign-in session.',
+        cause: error,
+      );
+    }
+    try {
+      final response = await _dio.get<Map<String, dynamic>>(
+        path,
+        queryParameters: queryParameters,
+        cancelToken: cancelToken,
+      );
+      return response.data ?? const {};
+    } on DioException catch (error) {
+      if (CancelToken.isCancel(error)) rethrow;
+      throw ApiRequestException(_messageFor(error), cause: error);
+    }
+  }
+
   Future<Map<String, dynamic>> postImage(
     String path,
     String imagePath, {

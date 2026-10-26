@@ -63,6 +63,25 @@ class WeatherResponse(BaseModel):
     forecast: list[ForecastPeriod]
 
 
+class CurrentDayWeatherResponse(BaseModel):
+    latitude: float
+    longitude: float
+    city_name: str | None = None
+    country_code: str | None = None
+    timezone_offset_seconds: int
+    current: CurrentWeather
+    next_24_hours: list[ForecastPeriod]
+
+
+class ForecastResponse(BaseModel):
+    latitude: float
+    longitude: float
+    city_name: str | None = None
+    country_code: str | None = None
+    timezone_offset_seconds: int
+    forecast: list[ForecastPeriod]
+
+
 def _timestamp(value: Any) -> datetime:
     if not isinstance(value, (int, float)):
         raise ValueError("Weather timestamp is invalid")
@@ -213,6 +232,30 @@ async def get_weather(
     return await weather_for_coordinates(lat, lon, redis_client)
 
 
+@router.get("/weather/current", response_model=CurrentDayWeatherResponse)
+async def get_current_weather(
+    request: Request,
+    lat: float = Query(ge=-90, le=90),
+    lon: float = Query(ge=-180, le=180),
+    user_id: str = Depends(require_user),
+) -> CurrentDayWeatherResponse:
+    del user_id
+    redis_client = getattr(request.app.state, "weather_redis", None)
+    return await current_day_for_coordinates(lat, lon, redis_client)
+
+
+@router.get("/weather/forecast", response_model=ForecastResponse)
+async def get_forecast(
+    request: Request,
+    lat: float = Query(ge=-90, le=90),
+    lon: float = Query(ge=-180, le=180),
+    user_id: str = Depends(require_user),
+) -> ForecastResponse:
+    del user_id
+    redis_client = getattr(request.app.state, "weather_redis", None)
+    return await forecast_for_coordinates(lat, lon, redis_client)
+
+
 async def weather_for_coordinates(lat: float, lon: float, redis_client: Any = None) -> WeatherResponse:
     api_key = os.getenv("OPENWEATHER_API_KEY", "").strip()
     if not api_key:
@@ -274,3 +317,64 @@ async def weather_for_coordinates(lat: float, lon: float, redis_client: Any = No
     if writes:
         await asyncio.gather(*writes)
     return weather_result
+
+
+async def current_day_for_coordinates(
+    lat: float, lon: float, redis_client: Any = None
+) -> CurrentDayWeatherResponse:
+    """Return observed conditions and forecast periods within the next 24 hours."""
+    result = await weather_for_coordinates(lat, lon, redis_client)
+    now = datetime.now(UTC)
+    cutoff = now.timestamp() + 24 * 60 * 60
+    next_24_hours = [
+        period for period in result.forecast
+        if now.timestamp() <= period.forecast_at.timestamp() <= cutoff
+    ]
+    return CurrentDayWeatherResponse(
+        latitude=result.latitude,
+        longitude=result.longitude,
+        city_name=result.city_name,
+        country_code=result.country_code,
+        timezone_offset_seconds=result.timezone_offset_seconds,
+        current=result.current,
+        next_24_hours=next_24_hours,
+    )
+
+
+async def forecast_for_coordinates(
+    lat: float, lon: float, redis_client: Any = None
+) -> ForecastResponse:
+    """Return the provider's full five-day forecast in three-hour periods."""
+    api_key = os.getenv("OPENWEATHER_API_KEY", "").strip()
+    if not api_key:
+        raise HTTPException(status_code=503, detail="Weather service is not configured")
+    latitude = round(lat, 3)
+    longitude = round(lon, 3)
+    cache_key = f"weather:v1:forecast:{latitude:.3f}:{longitude:.3f}"
+    forecast_data = await _read_cache(redis_client, cache_key)
+    cache_miss = forecast_data is None
+    if cache_miss:
+        params = {"lat": latitude, "lon": longitude, "appid": api_key, "units": "metric"}
+        async with httpx.AsyncClient(timeout=httpx.Timeout(8.0, connect=3.0)) as client:
+            forecast_data = await _fetch_weather(client, "forecast", params)
+    try:
+        forecast = _normalize_forecast(forecast_data)
+        city = forecast_data.get("city") or {}
+        if not isinstance(city, dict):
+            raise ValueError("Forecast location is invalid")
+        timezone_offset = int(_number(city, "timezone"))
+        city_name = city.get("name")
+        country_code = city.get("country")
+    except (KeyError, TypeError, ValueError) as exc:
+        logger.warning("OpenWeather returned a forecast that could not be normalized")
+        raise HTTPException(status_code=502, detail="Weather provider returned invalid data") from exc
+    if cache_miss:
+        await _write_cache(redis_client, cache_key, forecast_data, FORECAST_TTL_SECONDS)
+    return ForecastResponse(
+        latitude=latitude,
+        longitude=longitude,
+        city_name=str(city_name) if city_name else None,
+        country_code=str(country_code) if country_code else None,
+        timezone_offset_seconds=timezone_offset,
+        forecast=forecast,
+    )
