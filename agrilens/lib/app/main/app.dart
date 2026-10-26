@@ -1,15 +1,11 @@
-import 'package:agrilens/app/chat/data/conversation_repository.dart';
-import 'package:agrilens/app/chat/data/database.dart';
-import 'package:agrilens/app/chat/data/message_repository.dart';
-import 'package:agrilens/app/chat/data/prediction_repository.dart';
+import 'dart:async';
+
 import 'package:agrilens/app/chat/models/conversation.dart' as model;
-import 'package:agrilens/app/chat/services/diagnosis_pipeline.dart';
+import 'package:agrilens/app/chat/services/remote_chat_service.dart';
 import 'package:agrilens/app/auth/services/auth_session.dart';
 import 'package:agrilens/app/shop/views/shop_page.dart';
 import 'package:agrilens/app/weather/views/weather_page.dart';
 import 'package:agrilens/shared/api/api_client.dart';
-import 'package:agrilens/shared/services/backend_diagnosis_service.dart';
-import 'package:agrilens/shared/services/backend_llm_service.dart';
 import 'package:agrilens/app/chat/views/chat_page.dart';
 import 'package:agrilens/shared/theme/app_colors.dart';
 import 'package:agrilens/shared/utils/app_constants.dart';
@@ -39,7 +35,7 @@ const _mainPages = <_Destination>[
     pageLabel: 'Chat page',
   ),
   _Destination(
-    title: 'Shop',
+    title: 'Store',
     icon: SolarIconsOutline.shop,
     pageLabel: 'Shop page',
   ),
@@ -67,13 +63,7 @@ class _AppState extends State<App> {
   );
   final _scaffoldKey = GlobalKey<ScaffoldState>();
 
-  late final AgriLensDatabase _database;
-  late final ConversationRepository _conversationRepo;
-  late final MessageRepository _messageRepo;
-  late final PredictionRepository _predictionRepo;
-  late final BackendDiagnosisService _diagnosisService;
-  late final BackendLlmService _llmService;
-  late final DiagnosisPipeline _pipeline;
+  late final RemoteChatService _chatService;
 
   bool _initializing = true;
   String? _initializationError;
@@ -85,28 +75,14 @@ class _AppState extends State<App> {
   @override
   void initState() {
     super.initState();
-    _database = AgriLensDatabase();
-    _conversationRepo = ConversationRepository(_database);
-    _messageRepo = MessageRepository(_database);
-    _predictionRepo = PredictionRepository(_database);
-    _diagnosisService = BackendDiagnosisService(widget.apiClient);
-    _llmService = BackendLlmService(widget.apiClient);
-    _pipeline = DiagnosisPipeline(
-      diagnosisService: _diagnosisService,
-      llmService: _llmService,
-      conversationRepo: _conversationRepo,
-      messageRepo: _messageRepo,
-      predictionRepo: _predictionRepo,
-    );
+    _chatService = RemoteChatService(widget.apiClient);
     _bootstrap();
   }
 
   @override
   void dispose() {
+    unawaited(_chatService.dispose());
     _sidebarController.dispose();
-    _diagnosisService.dispose();
-    _llmService.dispose();
-    _database.close();
     super.dispose();
   }
 
@@ -118,11 +94,9 @@ class _AppState extends State<App> {
     });
 
     try {
-      await _diagnosisService.load();
-      await _llmService.load();
-      if (!_diagnosisService.isConfigured) {
+      if (!widget.apiClient.isConfigured) {
         _serviceWarning =
-            'The FastAPI server URL is missing or must use HTTPS. Configure API_BASE_URL.';
+            'The FastAPI server URL is missing. Configure API_BASE_URL.';
       }
 
       await _reloadConversations();
@@ -142,8 +116,13 @@ class _AppState extends State<App> {
     }
   }
 
+  Future<void> _reloadFromServer() async {
+    await _reloadConversations();
+    if (_conversations.isEmpty) await _createAndSelectConversation();
+  }
+
   Future<void> _reloadConversations() async {
-    final conversations = await _conversationRepo.getAllConversations();
+    final conversations = await _chatService.listConversations();
     if (!mounted) return;
     setState(() {
       _conversations = conversations;
@@ -161,7 +140,7 @@ class _AppState extends State<App> {
     final now = DateTime.now();
     final title =
         'Conversation ${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}';
-    final conv = await _conversationRepo.createConversation(title: title);
+    final conv = await _chatService.createConversation(title);
     await _reloadConversations();
     if (!mounted) return conv.id;
     setState(() {
@@ -169,6 +148,18 @@ class _AppState extends State<App> {
       _sidebarController.selectIndex(0);
     });
     return conv.id;
+  }
+
+  Future<void> _deleteConversation(String id) async {
+    await _chatService.deleteConversation(id);
+    final remaining = await _chatService.listConversations();
+    if (!mounted) return;
+    setState(() {
+      _conversations = remaining;
+      _activeConversationId = remaining.isEmpty ? null : remaining.first.id;
+      _sidebarController.selectIndex(0);
+    });
+    if (remaining.isEmpty) await _createAndSelectConversation();
   }
 
   List<_Destination> get _historyDestinations {
@@ -256,12 +247,11 @@ class _AppState extends State<App> {
         );
       }
       return ChatPage(
-        pipeline: _pipeline,
-        messageRepository: _messageRepo,
-        predictionRepository: _predictionRepo,
+        chatService: _chatService,
         conversationId: activeId,
         onCreateConversation: _createAndSelectConversation,
-        onConversationChanged: _reloadConversations,
+        onConversationChanged: _reloadFromServer,
+        onDeleteConversation: _deleteConversation,
         serviceWarning: _serviceWarning,
       );
     }

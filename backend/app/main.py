@@ -10,12 +10,13 @@ from uuid import UUID
 import logging
 
 from dotenv import load_dotenv
-from fastapi import Depends, FastAPI, File, Header, HTTPException, Request, UploadFile
+from fastapi import Depends, FastAPI, File, Form, Header, HTTPException, Request, UploadFile
 from pydantic import BaseModel, Field, model_validator
 from redis.asyncio import Redis
 
 from .ai_context import load_answer_context
 from .auth import require_user, router as auth_router
+from .conversations import conversation_answer_context, router as conversations_router, save_answer_messages, save_diagnosis
 from .gemini import GeneratedAnswer, GeminiUnavailable, generate_answer
 from .guidance import router as guidance_router
 from .model import ModelContractError, Prediction, get_diagnosis_model
@@ -41,6 +42,7 @@ async def lifespan(application: FastAPI):
 
 app = FastAPI(title="AgriLens API", version="1.0.0", lifespan=lifespan)
 app.include_router(auth_router)
+app.include_router(conversations_router)
 app.include_router(shop_router)
 app.include_router(weather_router)
 app.include_router(guidance_router)
@@ -60,14 +62,8 @@ class PredictionResponse(BaseModel):
     failure_reason: str | None = None
 
 
-class Message(BaseModel):
-    role: Literal["user", "assistant"]
-    content: str = Field(max_length=4000)
-
-
 class AnswerRequest(BaseModel):
-    prediction: PredictionResponse
-    prior_messages: list[Message] = Field(default_factory=list, max_length=20)
+    conversation_id: UUID
     user_follow_up: str | None = Field(default=None, max_length=4000)
     latitude: float | None = Field(default=None, ge=-90, le=90)
     longitude: float | None = Field(default=None, ge=-180, le=180)
@@ -119,9 +115,11 @@ async def health():
 @app.post("/v1/diagnoses", response_model=PredictionResponse)
 async def diagnose(
     image: UploadFile = File(...),
+    conversation_id: UUID = Form(...),
     user_id: str = Depends(require_user),
+    authorization: str | None = Header(default=None),
 ):
-    del user_id  # Authenticated request; image bytes are processed in memory only.
+    bearer_token = authorization.split(" ", 1)[1].strip() if authorization and authorization.lower().startswith("bearer ") else ""
     maximum = int(os.getenv("MAX_UPLOAD_BYTES", "10485760"))
     if image.content_type not in {
         "image/jpeg",
@@ -142,7 +140,11 @@ async def diagnose(
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     except ModelContractError as exc:
         raise HTTPException(status_code=503, detail="The diagnosis model is unavailable") from exc
-    return PredictionResponse(**prediction.__dict__)
+    response = PredictionResponse(**prediction.__dict__)
+    await save_diagnosis(conversation_id=conversation_id, user_id=user_id, token=bearer_token,
+                         image=payload, mime_type=image.content_type or "image/jpeg",
+                         prediction=response.model_dump(mode="json"))
+    return response
 
 
 @app.post("/v1/answers", response_model=AnswerResponse)
@@ -152,14 +154,14 @@ async def answer(
     user_id: str = Depends(require_user),
     authorization: str | None = Header(default=None),
 ):
-    del user_id
     bearer_token = (
         authorization.split(" ", 1)[1].strip()
         if authorization and authorization.lower().startswith("bearer ")
         else ""
     )
-    prediction = request.prediction.model_dump(mode="json")
-    prior_messages = [item.model_dump() for item in request.prior_messages]
+    prediction, prior_messages = await conversation_answer_context(
+        conversation_id=request.conversation_id, token=bearer_token,
+    )
 
     context_task = load_answer_context(
         bearer_token=bearer_token,
@@ -207,7 +209,10 @@ async def answer(
             products=product_candidates,
         )
     except GeminiUnavailable as exc:
-        raise HTTPException(status_code=503, detail=str(exc)) from exc
+        await save_answer_messages(conversation_id=request.conversation_id, user_id=user_id,
+                                   token=bearer_token, follow_up=request.user_follow_up, failure=str(exc))
+        raise HTTPException(status_code=503, detail=str(exc),
+                            headers={"X-AgriLens-Followup-Saved": "true"}) from exc
 
     # Only hydrate identifiers from this request's verified search results.
     products_by_id = {str(item.get("id")): item for item in product_candidates}
@@ -244,6 +249,10 @@ async def answer(
                 organization=source["source_organization"], url=source["source_url"],
                 published_on=source.get("source_published_on"), reviewed_on=source["reviewed_on"],
             ))
-    return AnswerResponse(
+    response = AnswerResponse(
         answer=generated.answer.strip(), products=selected_products, sources=selected_sources
     )
+    await save_answer_messages(conversation_id=request.conversation_id, user_id=user_id,
+                               token=bearer_token, follow_up=request.user_follow_up,
+                               answer=response.answer, metadata=response.model_dump(mode="json"))
+    return response

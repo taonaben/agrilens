@@ -23,12 +23,16 @@ create table if not exists public.agrilens_messages (
   image_object_path text,
   lifecycle text not null check (lifecycle in ('pending', 'complete', 'failed')),
   failure_reason text,
+  response_metadata jsonb not null default '{}'::jsonb,
   created_at timestamptz not null,
   updated_at timestamptz not null,
   constraint agrilens_image_message_path check (
     content_type <> 'image' or image_object_path is not null or lifecycle <> 'complete'
   )
 );
+
+alter table public.agrilens_messages
+  add column if not exists response_metadata jsonb not null default '{}'::jsonb;
 
 create table if not exists public.agrilens_predictions (
   id uuid primary key,

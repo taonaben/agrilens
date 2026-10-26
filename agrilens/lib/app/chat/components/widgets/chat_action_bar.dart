@@ -9,6 +9,7 @@ class ChatActionBar extends StatelessWidget {
     required this.showRetryAction,
     required this.onNewChatTap,
     required this.onRetryTap,
+    required this.onDeleteTap,
     required this.onCancelTap,
   });
 
@@ -16,6 +17,7 @@ class ChatActionBar extends StatelessWidget {
   final bool showRetryAction;
   final VoidCallback onNewChatTap;
   final VoidCallback onRetryTap;
+  final VoidCallback onDeleteTap;
   final VoidCallback onCancelTap;
 
   @override
@@ -40,6 +42,11 @@ class ChatActionBar extends StatelessWidget {
               tooltip: 'Cancel generation',
               icon: const Icon(SolarIconsOutline.closeCircle),
             ),
+          IconButton(
+            onPressed: isBusy ? null : onDeleteTap,
+            tooltip: 'Delete conversation',
+            icon: const Icon(SolarIconsOutline.trashBinTrash),
+          ),
           IconButton(
             onPressed: isBusy ? null : onNewChatTap,
             tooltip: 'New chat',

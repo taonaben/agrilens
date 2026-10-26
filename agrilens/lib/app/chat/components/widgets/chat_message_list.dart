@@ -1,6 +1,7 @@
 import 'package:agrilens/app/chat/components/widgets/message_bubble.dart';
 import 'package:agrilens/app/chat/models/message.dart';
 import 'package:agrilens/app/chat/models/prediction.dart';
+import 'package:agrilens/app/chat/services/remote_chat_service.dart';
 import 'package:agrilens/shared/utils/app_constants.dart';
 import 'package:flutter/material.dart';
 
@@ -10,11 +11,13 @@ class ChatMessageList extends StatelessWidget {
     required this.isLoading,
     required this.messages,
     required this.predictionsByMessageId,
+    this.answersByMessageId = const {},
   });
 
   final bool isLoading;
   final List<MessageModel> messages;
   final Map<String, Prediction> predictionsByMessageId;
+  final Map<String, AnswerMetadata> answersByMessageId;
 
   @override
   Widget build(BuildContext context) {
@@ -46,6 +49,7 @@ class ChatMessageList extends StatelessWidget {
         return MessageBubble(
           message: message,
           prediction: predictionsByMessageId[message.id],
+          answerMetadata: answersByMessageId[message.id],
         );
       },
     );

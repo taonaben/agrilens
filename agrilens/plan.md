@@ -4,26 +4,26 @@ Build from the foundation up. The first Chat screen must use real saved records 
 
 Status: `[ ]` pending; `[x]` implemented and verified. Keep a phase pending when its asset exists but its behavior has not been exercised.
 
-## Owner-approved architecture update (24 October 2026)
+## Owner-approved architecture update (26 October 2026)
 
-The owner selected server-side predictions, hosted Gemini behind FastAPI, Supabase email/password Auth, Supabase Postgres history storage, and private Supabase Storage for original photos, all accessed through FastAPI. Drift remains the local history store. Synced photos are retained until conversation deletion. Flutter must not access Supabase database or storage APIs directly. This supersedes the earlier local-model release choice below. Existing local model and pipeline work remains useful for contract reference and rollback, but is not the selected runtime path.
+The owner selected server-side predictions, hosted Gemini behind FastAPI, Supabase email/password Auth, Supabase Postgres history storage, and private Supabase Storage for original photos, all accessed through FastAPI. FastAPI is the source of truth for Chat; Drift, offline history, sync, and offline request queues are not in the runtime path. Legacy local conversation records are discarded once during app startup. Original photos are retained until conversation deletion. Flutter must not access Supabase database or storage APIs directly. Earlier local model and pipeline work is historical/reference only.
 
 ### Migration sequence
 
-1. [ ] Define a versioned HTTPS contract for diagnosis and follow-up responses using the exact nine-class order and current preprocessing/rejection artifacts.
-2. [ ] Add a FastAPI service that loads the TFLite artifact, preprocesses images, applies available rejection checks, and calls Gemini only from the server. The Gemini key must never enter the Flutter app.
-3. [ ] Add Supabase Auth token validation and ownership checks to protected endpoints. Persist original photos only as part of the authenticated conversation-history sync contract.
-4. [ ] Replace the Flutter runtime model services with HTTPS implementations behind the existing service interfaces. Keep Drift local history usable offline and show network failures as retryable states.
+1. [x] Define the paginated `/v1` HTTPS contract for conversation CRUD, diagnosis uploads, conversation-scoped answers, history details, and private photo reads/deletion.
+2. [ ] Verify the server TFLite/Gemini path against the deployed model and artifacts with an authenticated request. The Gemini key must never enter the Flutter app.
+3. [ ] Verify Supabase Auth token validation and ownership isolation against a configured Supabase project. The Flutter client sends the saved bearer token on every Chat request.
+4. [x] Replace the Chat runtime with authenticated HTTPS requests and server-loaded conversation state. Keep failed requests retryable; do not queue them offline.
 5. [ ] Apply the Supabase Postgres schema and private Storage policies in `../backend/supabase/schema.sql`; FastAPI remains the client-facing API and uses the Supabase user token for owner-scoped access.
-6. [ ] Define and implement authenticated snapshot sync, conflict handling, offline deletion tombstones, and photo upload/download/deletion through FastAPI. Keep local IDs stable and sync states explicit so failed work can resume safely.
+6. [x] Add authenticated server conversation CRUD, image persistence/read, answer persistence, and deletion of conversation photos through FastAPI. No snapshot sync or tombstones are used.
 
 ### Migration gate
 
-A photo reaches FastAPI over HTTPS, the service returns a typed prediction in trained class order and a bounded Gemini explanation, and Flutter persists both in Drift. Cross-device sync must preserve original photos and delete remote objects with their conversation.
+A photo reaches FastAPI over HTTPS, the service returns a typed prediction in trained class order and a bounded Gemini explanation, and the server persists both with the original photo. Flutter reloads the saved conversation from FastAPI. Live Supabase and authenticated end-to-end verification remain required before this gate is complete.
 
 ## Original local implementation plan
 
-The phases below describe the work completed under the previous local-first direction. Do not treat local model execution or airplane-mode diagnosis as the current release target.
+The phases below describe work completed under the previous local-first direction. They are historical; do not treat local model execution or airplane-mode diagnosis as the current release target.
 
 ## Historical local target
 
@@ -92,4 +92,4 @@ The database for this first pass is **on-device Drift/SQLite**, matching the off
 
 ## Work allocation
 
-Bounded tasks include FastAPI inference, Gemini integration, Supabase Auth verification, Flutter HTTPS adapters, and Drift synchronization. The project owner reviews the schema contract, rejection behavior, remote storage and retention, agricultural content, privacy, and release criteria. Each handoff must show real output or a precise blocker, the files changed, and the validation performed.
+Bounded tasks include FastAPI diagnosis/history APIs, Gemini integration, Supabase Auth verification, and Flutter HTTPS adapters. The project owner reviews the schema contract, rejection behavior, remote storage and retention, agricultural content, privacy, and release criteria. Each handoff must show real output or a precise blocker, the files changed, and the validation performed.

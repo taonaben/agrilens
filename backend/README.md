@@ -6,7 +6,7 @@ This service runs the nine-class TFLite classifier and requests bounded explanat
 
 This is an independently buildable service folder in the repository. From `backend/`, copy `.env.example` to `.env`, fill in Supabase, Gemini, and OpenWeather settings, then run `docker compose up --build -d`. Compose builds only this folder, mounts `app/` into the container, and enables Uvicorn reload. Saving a backend source file in `app/` automatically restarts the API process; changes are shared both ways between the host and container. The ignored TFLite model and sibling training artifacts are mounted read-only and excluded from the image and Git context. Compose also starts Redis for shared weather caching.
 
-View logs with `docker compose logs -f api`; stop the local service with `docker compose down`. The container listens on port 8888. Configure the Flutter app's `AGRILENS_API_BASE_URL` to reach the API. Put a TLS ingress or load balancer in front of deployed containers. The API is stateless; scale replicas behind that ingress, and keep each container's `WEB_CONCURRENCY` conservative because each worker loads its own model into memory. Supabase holds durable application data; no conversation state is stored in the container.
+View logs with `docker compose logs -f api`; stop the local service with `docker compose down`. The container listens on port 8888. Configure the Flutter app's `API_BASE_URL` in its `.env` file to reach the API. Put a TLS ingress or load balancer in front of deployed containers. The API is stateless; scale replicas behind that ingress, and keep each container's `WEB_CONCURRENCY` conservative because each worker loads its own model into memory. Supabase holds durable application data; no conversation state is stored in the container.
 
 For a platform that builds directly from the repository, set the Docker build context to `backend/` and the Dockerfile to `backend/Dockerfile`. Provide the model and artifacts as mounted read-only files at `/models/agrilens_model.tflite` and `/models/artifacts/`, and inject secrets from the platform's secret manager.
 
@@ -23,8 +23,13 @@ The deployed service must be given `agrilens_model.tflite` and the three version
 - `GET /health`: process health only; it does not certify model readiness.
 - `POST /auth/register`: JSON `{ "email": "...", "password": "..." }`; creates a Supabase Auth account. Whether a session is returned depends on Supabase email-confirmation settings.
 - `POST /auth/login`: JSON `{ "email": "...", "password": "..." }`; returns the Supabase Auth session, including the access token Flutter sends as a bearer token to protected endpoints.
-- `POST /v1/diagnoses`: multipart `image` upload; returns the typed prediction and score evidence.
-- `POST /v1/answers`: JSON classifier evidence, recent turns, optional follow-up, and optional `latitude` plus `longitude`; returns `answer`, model-selected `products`, and cited `sources`. Existing clients can continue reading `answer`; location remains optional.
+- `POST /v1/diagnoses`: multipart `image` and `conversation_id`; stores the original photo and typed prediction in that conversation, then returns score evidence.
+- `POST /v1/answers`: JSON `{ "conversation_id": "...", "user_follow_up": "..." }` (follow-up optional); the server loads the saved prediction and recent turns, calls Gemini, and persists the answer with selected product/source metadata.
+- `POST /v1/conversations`: create an authenticated conversation with `{ "title": "..." }`.
+- `GET /v1/conversations`: list the signed-in user's conversations (paginated with `limit` and `offset`; Flutter loads every page).
+- `GET /v1/conversations/{id}`: return messages, predictions, answer metadata, and mediated image URLs.
+- `GET /v1/conversations/{id}/messages/{message_id}/image`: stream the private original image after checking conversation ownership.
+- `DELETE /v1/conversations/{id}`: delete the conversation and its private images.
 - `GET /v1/weather/current?lat=…&lon=…`: authenticated current conditions plus forecast periods over the next 24 hours.
 - `GET /v1/weather/forecast?lat=…&lon=…`: authenticated five-day forecast in three-hour intervals.
 - Both weather endpoints return metric units and require `OPENWEATHER_API_KEY`. Current conditions are cached in Redis for 10 minutes and forecast data for 30 minutes; cache keys use coordinates rounded to three decimal places. Location is not persisted. The combined `GET /v1/weather` route remains available for compatibility.
@@ -33,7 +38,7 @@ Authenticated requests use `Authorization: Bearer <Supabase access token>`. The 
 
 ### Shop API
 
-- `POST /v1/history/sync`: authenticated upsert of conversations, messages, and predictions. The server assigns the authenticated owner ID; message and prediction references are checked against that owner's saved records.
+- `POST /v1/history/sync`: legacy authenticated upsert of conversations, messages, and predictions. The server assigns the authenticated owner ID; the Chat app no longer calls this route.
 - `GET /v1/products`: authenticated list of active products.
 - `POST /v1/products`: add a product using the `X-Shop-Admin-Token` header. Include optional `image_url` to download a product image into Supabase Storage.
 - `DELETE /v1/products/{product_id}`: deactivate a product using the operator token. Existing order snapshots remain intact.
@@ -43,9 +48,11 @@ Authenticated requests use `Authorization: Bearer <Supabase access token>`. The 
 - `POST /v1/orders`: create an order with `items` (`product_id`, `quantity`), `contact_name`, `phone`, and `delivery_address`. Stock is reserved transactionally. Orders containing multiple currencies are rejected.
 - `GET /v1/orders`: list the authenticated user's orders with item snapshots.
 
-Set `SUPABASE_SERVICE_ROLE_KEY` and a long random `SHOP_ADMIN_TOKEN` on the backend to enable catalog management. Keep both server-side; clients receive neither secret. Product images must be publicly reachable HTTPS JPEG, PNG, or WebP files under 5 MB. FastAPI validates the resolved host and redirects, uploads the original bytes to the public `agrilens-products` bucket, and stores the object path on the product. The shop image bucket is separate from private chat photos. Orders do not collect payment. `POST /v1/history/sync` supports record upserts; photo transfer and remote deletion are still separate work.
+Set `SUPABASE_SERVICE_ROLE_KEY` and a long random `SHOP_ADMIN_TOKEN` on the backend to enable catalog management. Keep both server-side; clients receive neither secret. Product images must be publicly reachable HTTPS JPEG, PNG, or WebP files under 5 MB. FastAPI validates the resolved host and redirects, uploads the original bytes to the public `agrilens-products` bucket, and stores the object path on the product. The shop image bucket is separate from private chat photos. Orders do not collect payment.
 
 The initial guidance seed contains only general tomato water-management context from the Zimbabwe DRSS Solanaceous Section; it deliberately omits that page's older pesticide references. After applying the schema and configuring the admin token, import it with `python scripts/import_guidance_seed.py --api-base-url http://localhost:8888`. Disease-specific recommendations remain unavailable until reviewed sources and verified product records are added.
+
+The Chat app requires network access for all diagnosis, answers, and history reads. Apply `supabase/schema.sql` before using Chat; it includes the private `agrilens-history` bucket and the `response_metadata` column used to retain answer citations and product suggestions.
 
 ## Contract limits
 

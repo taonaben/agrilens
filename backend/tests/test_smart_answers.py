@@ -9,7 +9,7 @@ import httpx
 
 from app import ai_context
 from app.auth import require_user
-from app.gemini import GeneratedAnswer, generate_answer
+from app.gemini import GeneratedAnswer, GeminiUnavailable, generate_answer
 from app.embeddings import embed_texts
 from app.main import app
 from app.shop import ProductInput
@@ -74,6 +74,13 @@ class SmartAnswerTests(unittest.IsolatedAsyncioTestCase):
         os.environ["SUPABASE_URL"] = "https://example.supabase.co"
         app.state.weather_redis = None
         app.dependency_overrides[require_user] = lambda: "test-user"
+        self.conversation_context = patch(
+            "app.main.conversation_answer_context",
+            new=AsyncMock(return_value=(_prediction(), [])),
+        )
+        self.answer_persistence = patch("app.main.save_answer_messages", new=AsyncMock())
+        self.conversation_context_mock = self.conversation_context.start()
+        self.answer_persistence_mock = self.answer_persistence.start()
         self.client = httpx.AsyncClient(
             transport=httpx.ASGITransport(app=app), base_url="http://test"
         )
@@ -81,6 +88,8 @@ class SmartAnswerTests(unittest.IsolatedAsyncioTestCase):
     async def asyncTearDown(self):
         await self.client.aclose()
         app.dependency_overrides.pop(require_user, None)
+        self.conversation_context.stop()
+        self.answer_persistence.stop()
         if self.original_supabase_url is None:
             os.environ.pop("SUPABASE_URL", None)
         else:
@@ -100,7 +109,7 @@ class SmartAnswerTests(unittest.IsolatedAsyncioTestCase):
             response = await self.client.post(
                 "/v1/answers",
                 headers={"Authorization": "Bearer user-token"},
-                json={"prediction": _prediction(), "user_follow_up": "What should I do?"},
+                json={"conversation_id": "da622fec-94f6-4cc7-9a1f-2398f2cac944", "user_follow_up": "What should I do?"},
             )
         self.assertEqual(response.status_code, 200, response.text)
         body = response.json()
@@ -109,8 +118,11 @@ class SmartAnswerTests(unittest.IsolatedAsyncioTestCase):
         self.assertTrue(body["products"][0]["image_url"].endswith("BLIGHT-01/item.webp"))
         self.assertEqual(body["sources"][0]["id"], SOURCE_ID)
         self.assertIsNone(generate.await_args.kwargs["weather"])
+        self.answer_persistence_mock.assert_awaited_once()
+        self.assertEqual(self.answer_persistence_mock.await_args.kwargs["metadata"]["sources"][0]["id"], SOURCE_ID)
 
     async def test_unretrieved_ids_are_dropped_and_uncertain_scan_cannot_return_products(self):
+        self.conversation_context_mock.return_value = (_prediction("uncertain"), [])
         context = {"products": [_product()], "guidance": [_guidance()]}
         generated = GeneratedAnswer(
             answer="The result is uncertain; take another clear photo.",
@@ -124,7 +136,7 @@ class SmartAnswerTests(unittest.IsolatedAsyncioTestCase):
             response = await self.client.post(
                 "/v1/answers",
                 headers={"Authorization": "Bearer user-token"},
-                json={"prediction": _prediction("uncertain")},
+                json={"conversation_id": "da622fec-94f6-4cc7-9a1f-2398f2cac944"},
             )
         self.assertEqual(response.status_code, 200, response.text)
         self.assertEqual(response.json()["products"], [])
@@ -140,7 +152,7 @@ class SmartAnswerTests(unittest.IsolatedAsyncioTestCase):
             response = await self.client.post(
                 "/v1/answers",
                 headers={"Authorization": "Bearer user-token"},
-                json={"prediction": _prediction(), "latitude": -17.8, "longitude": 31.0},
+                json={"conversation_id": "da622fec-94f6-4cc7-9a1f-2398f2cac944", "latitude": -17.8, "longitude": 31.0},
             )
         self.assertEqual(response.status_code, 200, response.text)
         self.assertIsNone(generate.await_args.kwargs["weather"])
@@ -149,9 +161,24 @@ class SmartAnswerTests(unittest.IsolatedAsyncioTestCase):
         response = await self.client.post(
             "/v1/answers",
             headers={"Authorization": "Bearer user-token"},
-            json={"prediction": _prediction(), "latitude": -17.8},
+                json={"conversation_id": "da622fec-94f6-4cc7-9a1f-2398f2cac944", "latitude": -17.8},
         )
         self.assertEqual(response.status_code, 422)
+
+    async def test_failed_gemini_response_is_persisted_and_marks_follow_up_saved(self):
+        with (
+            patch("app.main.load_answer_context", new=AsyncMock(return_value={"products": [], "guidance": []})),
+            patch("app.main.generate_answer", new=AsyncMock(side_effect=GeminiUnavailable("Gemini is unavailable"))),
+        ):
+            response = await self.client.post(
+                "/v1/answers",
+                headers={"Authorization": "Bearer user-token"},
+                json={"conversation_id": "da622fec-94f6-4cc7-9a1f-2398f2cac944", "user_follow_up": "What now?"},
+            )
+        self.assertEqual(response.status_code, 503)
+        self.assertEqual(response.headers["x-agrilens-followup-saved"], "true")
+        self.answer_persistence_mock.assert_awaited_once()
+        self.assertEqual(self.answer_persistence_mock.await_args.kwargs["follow_up"], "What now?")
 
     async def test_rule_based_recommendation_endpoint_is_retired(self):
         response = await self.client.get(

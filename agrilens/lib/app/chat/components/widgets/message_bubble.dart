@@ -10,12 +10,20 @@ import 'package:flutter/material.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:gap/gap.dart';
 import 'package:solar_icons/solar_icons.dart';
+import 'package:url_launcher/url_launcher.dart';
+import '../../services/remote_chat_service.dart';
 
 class MessageBubble extends StatelessWidget {
-  const MessageBubble({super.key, required this.message, this.prediction});
+  const MessageBubble({
+    super.key,
+    required this.message,
+    this.prediction,
+    this.answerMetadata,
+  });
 
   final MessageModel message;
   final Prediction? prediction;
+  final AnswerMetadata? answerMetadata;
 
   @override
   Widget build(BuildContext context) {
@@ -102,6 +110,37 @@ class MessageBubble extends StatelessWidget {
                 const Gap(AppConstants.gapSmall),
                 PredictionCard(prediction: prediction!),
               ],
+              if (answerMetadata != null &&
+                  (answerMetadata!.sources.isNotEmpty ||
+                      answerMetadata!.products.isNotEmpty)) ...[
+                const Gap(AppConstants.gapSmall),
+                if (answerMetadata!.sources.isNotEmpty)
+                  ...answerMetadata!.sources.map(
+                    (source) => TextButton.icon(
+                      onPressed: () => _openUrl(source.url),
+                      icon: const Icon(SolarIconsOutline.link, size: 16),
+                      label: Text(
+                        '${source.title}${source.organization.isEmpty ? '' : ' · ${source.organization}'}',
+                      ),
+                    ),
+                  ),
+                for (final product in answerMetadata!.products)
+                  Card(
+                    child: ListTile(
+                      leading: const Icon(SolarIconsOutline.shop),
+                      title: Text(product.name),
+                      subtitle: Text(
+                        '${product.description}\n${product.currency} ${product.price}',
+                      ),
+                      isThreeLine: true,
+                      trailing: IconButton(
+                        tooltip: 'View product evidence',
+                        onPressed: () => _openUrl(product.evidenceUrl),
+                        icon: const Icon(SolarIconsOutline.link),
+                      ),
+                    ),
+                  ),
+              ],
               if (message.lifecycle == MessageLifecycle.pending) ...[
                 const Gap(AppConstants.gapSmall),
                 const Row(
@@ -129,6 +168,13 @@ class MessageBubble extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  Future<void> _openUrl(String value) async {
+    final uri = Uri.tryParse(value);
+    if (uri != null && (uri.scheme == 'https' || uri.scheme == 'http')) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    }
   }
 
   void _showImagePreview(BuildContext context, String imagePath) {

@@ -2,6 +2,7 @@
 
 import 'dart:async';
 import 'dart:collection';
+import 'dart:typed_data';
 
 import 'package:dio/dio.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
@@ -186,9 +187,57 @@ class ApiClient {
     }
   }
 
+  Future<void> delete(String path, {CancelToken? cancelToken}) async {
+    try {
+      if ((await _accessTokenProvider?.call())?.isNotEmpty != true) {
+        throw const ApiRequestException('Sign in to use diagnosis and chat.');
+      }
+    } on ApiRequestException {
+      rethrow;
+    } catch (error) {
+      throw ApiRequestException(
+        'Could not read the saved sign-in session.',
+        cause: error,
+      );
+    }
+    try {
+      await _dio.delete<void>(path, cancelToken: cancelToken);
+    } on DioException catch (error) {
+      if (CancelToken.isCancel(error)) rethrow;
+      throw ApiRequestException(_messageFor(error), cause: error);
+    }
+  }
+
+  Future<Uint8List> getBytes(String path, {CancelToken? cancelToken}) async {
+    try {
+      if ((await _accessTokenProvider?.call())?.isNotEmpty != true) {
+        throw const ApiRequestException('Sign in to use diagnosis and chat.');
+      }
+    } on ApiRequestException {
+      rethrow;
+    } catch (error) {
+      throw ApiRequestException(
+        'Could not read the saved sign-in session.',
+        cause: error,
+      );
+    }
+    try {
+      final response = await _dio.get<List<int>>(
+        path,
+        options: Options(responseType: ResponseType.bytes),
+        cancelToken: cancelToken,
+      );
+      return Uint8List.fromList(response.data ?? const []);
+    } on DioException catch (error) {
+      if (CancelToken.isCancel(error)) rethrow;
+      throw ApiRequestException(_messageFor(error), cause: error);
+    }
+  }
+
   Future<Map<String, dynamic>> postImage(
     String path,
     String imagePath, {
+    Map<String, dynamic> fields = const {},
     CancelToken? cancelToken,
   }) async {
     try {
@@ -207,6 +256,7 @@ class ApiClient {
       final response = await _dio.post<Map<String, dynamic>>(
         path,
         data: FormData.fromMap({
+          ...fields,
           'image': await MultipartFile.fromFile(imagePath),
         }),
         cancelToken: cancelToken,
@@ -261,6 +311,13 @@ class ApiRequestException implements Exception {
 
   final String message;
   final Object? cause;
+
+  bool get followUpWasSaved =>
+      cause is DioException &&
+      (cause as DioException).response?.headers.value(
+            'x-agrilens-followup-saved',
+          ) ==
+          'true';
 
   @override
   String toString() => message;

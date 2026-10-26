@@ -2,14 +2,14 @@
 
 ## Product intent
 
-AgriLens helps a farmer photograph a maize or tomato leaf, see which **supported condition it resembles**, and understand a safe next step. The app uses a FastAPI backend over HTTPS for image classification and hosted Gemini responses. Drift keeps a local copy of conversations and results; authenticated history sync uses Supabase Auth. The app needs a network connection to analyze images or ask follow-up questions, while saved local history remains available offline.
+AgriLens helps a farmer photograph a maize or tomato leaf, see which **supported condition it resembles**, and understand a safe next step. FastAPI over HTTPS handles image classification, hosted Gemini responses, and all conversation history. The app requires a network connection for Chat and does not provide offline history or queued requests.
 
-## Owner-approved architecture direction (24 October 2026)
+## Owner-approved architecture direction (26 October 2026)
 
 - Move all image inference to FastAPI and use Gemini through that service for follow-up answers. Keep the Gemini credential on the server.
-- Use Supabase Auth with email/password to identify the user for protected API requests and history sync. FastAPI mediates all client requests; Supabase Postgres is the persistent history store. Flutter must not connect directly to Supabase data services.
-- Keep Drift as the local conversation store and cache. Sync conversations, messages, predictions, and original leaf photos through FastAPI to Supabase Postgres and a private Supabase Storage bucket.
-- Retain synced photos with their conversation until that conversation is deleted. FastAPI mediates reads, writes, and deletion; Flutter must not call Supabase database or storage APIs directly.
+- Use Supabase Auth with email/password to identify the user for protected API requests. FastAPI mediates all client requests; Supabase Postgres is the persistent history store. Flutter must not connect directly to Supabase data services.
+- FastAPI is the source of truth for conversations, messages, predictions, and original leaf photos in a private Supabase Storage bucket. Flutter loads and mutates them only through authenticated FastAPI endpoints; no history sync or offline request queue is in scope.
+- Retain original photos with their conversation until that conversation is deleted. FastAPI mediates reads, writes, and deletion; Flutter must not call Supabase database or storage APIs directly. Drift is not part of the Chat runtime; legacy local Chat records are discarded during the one-time app migration.
 
 This is decision support, not a definitive diagnosis. A healthy-class result does not prove a plant is healthy. The classifier does not determine severity, identify every disease, or prescribe chemicals.
 
@@ -21,7 +21,7 @@ This is decision support, not a definitive diagnosis. A healthy-class result doe
 4. Show the crop, possible condition, confidence or uncertainty state, and model limitations in plain language. Keep the photo next to its result.
 5. Offer short, reviewed condition information and practical observation steps. When evidence is weak, ask for a better photo or local expert help instead of fabricating a diagnosis.
 6. Let the farmer ask a follow-up question through FastAPI, which calls hosted Gemini. The answer must distinguish classifier evidence from verified guidance.
-7. Save the conversation and result in Drift, with clear status for pending and failed work. Sync history and original photos to the authenticated account, and remove remote records and photos when a conversation is deleted.
+7. Save the conversation and result on the server, and remove remote records and photos when a conversation is deleted.
 
 ## V1 scope
 
@@ -36,16 +36,16 @@ This is decision support, not a definitive diagnosis. A healthy-class result doe
 ## Success criteria
 
 - On a representative Android phone with network access, the user can choose or capture a valid image and receive a server-side result in Chat. Record round-trip latency and supported devices before setting release thresholds.
-- A checked integration test confirms Flutter preprocessing and class mapping match the exported model. Compare representative logits and embeddings with the training reference where available.
+- A checked backend integration confirms model preprocessing, ordered class mapping, and rejection outputs match the exported artifacts. Compare representative logits and embeddings with the training reference where available.
 - A non-leaf image, poor image, ambiguous result, and unsupported condition have clear recovery paths. Do not show a confident disease claim simply because one of nine logits is highest.
 - Every displayed disease statement is traceable to reviewed guidance. The UI uses “possible match” language and explains that healthy means no supported condition was recognized.
 - Existing mobile and wide-screen navigation behavior, light/dark themes, and core widget tests remain intact.
 - Field evaluation includes labeled real-world photos and unsupported inputs, with per-class errors and rejection behavior recorded. PlantVillage test accuracy alone is not a release gate.
 
-## Current evidence and gaps (24 October 2026)
+## Current evidence and gaps (26 October 2026)
 
-- The app has a themed responsive SidebarX shell, Drift-backed Chat flow, and local classifier/conversation services from the earlier implementation direction.
-- The user has now selected FastAPI-hosted TFLite inference, Gemini responses, Supabase email/password Auth, and FastAPI-owned history storage. Flutter HTTPS adapters and the FastAPI inference/answer endpoints are being introduced; persistent history sync is not implemented yet.
+- The app has a themed responsive SidebarX shell and email/password authentication. Chat now uses FastAPI for conversation CRUD, diagnosis, answer generation, and history/photo reads; Drift records from the earlier local implementation are removed once on startup.
+- FastAPI history routes use Supabase Auth bearer tokens and private photo storage. The Supabase schema change and live authenticated Supabase flow still require deployment verification.
 - The model files under `assets/models/` are git-ignored. The Flutter app no longer bundles that directory; the backend deployment must be provisioned with the TFLite model separately. The Qwen GGUF is not part of the hosted path.
 - Training artifacts report 99.1% held-out PlantVillage accuracy and 98.7% macro F1. These numbers measure the recorded dataset split, not field reliability.
 - The field probe contains 15 photos without ground-truth labels; the unsupported-input probe had zero images. No device benchmark, model card, or PyTorch/TFLite comparison file is present in the current artifacts folder.
@@ -54,11 +54,11 @@ This is decision support, not a definitive diagnosis. A healthy-class result doe
 
 ## Architecture boundaries
 
-- Widgets present state and dispatch actions. A diagnosis service owns image decoding, preprocessing, model invocation, class mapping, and rejection. Use typed result and failure states; do not put tensor logic in widgets.
+- Widgets present state and dispatch actions. FastAPI owns image decoding, preprocessing, model invocation, class mapping, and rejection. Flutter validates and presents typed server results; do not put tensor or storage logic in widgets.
 - The classifier supplies image evidence. Reviewed content supplies descriptions and next steps. A conversational model, if enabled, explains only within those boundaries and reports uncertainty faithfully.
-- Upload a photo only when the user requests diagnosis. Retain the original in private remote storage as part of synced history until its conversation is deleted; mediate all access and deletion through FastAPI.
+- Upload the original photo only when the user requests diagnosis. Retain it in private remote storage until its conversation is deleted; mediate all access and deletion through FastAPI.
 - Store model version, preprocessing version, class ID, decision state, score evidence, and timestamp with each saved result so old conversations remain interpretable after a model update.
-- Keep Drift as the local database and make FastAPI, Supabase Auth, and network access replaceable services. Keep Gemini credentials and model execution on the backend.
+- Keep FastAPI as the source of truth for Chat. Keep Gemini credentials, model execution, and Supabase access on the backend.
 
 ## Out of scope for the first diagnosis milestone
 
@@ -66,10 +66,10 @@ Automatic treatment or pesticide prescriptions; severity or yield estimation; wh
 
 ## Decisions reserved for the project owner
 
-1. Define sync conflict behavior, offline deletion behavior, and account deletion semantics before shipping history sync. FastAPI, hosted Gemini, Supabase Auth, Supabase Postgres, private Supabase Storage for original photos, and conversation-scoped photo retention until conversation deletion are approved.
+1. Define account deletion semantics. FastAPI, hosted Gemini, Supabase Auth, Supabase Postgres, private Supabase Storage for original photos, and conversation-scoped photo retention until conversation deletion are approved. Offline history and sync are out of scope.
 2. Which agricultural sources and reviewer approve condition guidance, including region-specific treatment wording.
 3. Release thresholds for field performance, rejection, supported devices, inference time, memory, and package size after measurement.
-4. Data retention and backup behavior for photos and chat history.
+4. Data retention and backup behavior for server-held photos and chat history.
 
 ## Related files
 
