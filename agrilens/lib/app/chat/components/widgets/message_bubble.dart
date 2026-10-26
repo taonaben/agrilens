@@ -7,6 +7,7 @@ import 'package:agrilens/shared/components/custom_progress_indicator.dart';
 import 'package:agrilens/shared/theme/app_colors.dart';
 import 'package:agrilens/shared/utils/app_constants.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:gap/gap.dart';
 import 'package:solar_icons/solar_icons.dart';
 
@@ -82,7 +83,21 @@ class MessageBubble extends StatelessWidget {
                 Text(message.textContent!.trim()),
               if (message.contentType == MessageContentType.text &&
                   (message.textContent?.trim().isNotEmpty ?? false))
-                Text(message.textContent!.trim()),
+                if (isUser)
+                  Text(message.textContent!.trim())
+                else
+                  MarkdownBody(
+                    data: message.textContent!.trim(),
+                    styleSheet: MarkdownStyleSheet.fromTheme(
+                      Theme.of(context),
+                    ).copyWith(
+                      p: Theme.of(context).textTheme.bodyMedium,
+                      h1: Theme.of(context).textTheme.titleLarge,
+                      h2: Theme.of(context).textTheme.titleMedium,
+                      h3: Theme.of(context).textTheme.titleSmall,
+                      listBullet: Theme.of(context).textTheme.bodyMedium,
+                    ),
+                  ),
               if (prediction != null) ...[
                 const Gap(AppConstants.gapSmall),
                 PredictionCard(prediction: prediction!),

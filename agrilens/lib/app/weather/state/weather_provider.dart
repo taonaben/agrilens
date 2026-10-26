@@ -37,7 +37,7 @@ class WeatherState {
   );
 }
 
-/// Data coordinator for the weather screen; widgets can render this state later.
+/// Coordinates current conditions and forecast requests for the weather screen.
 class WeatherNotifier extends StateNotifier<WeatherState> {
   WeatherNotifier({
     required WeatherServices weatherServices,
@@ -50,12 +50,20 @@ class WeatherNotifier extends StateNotifier<WeatherState> {
   final WeatherLocationService _locationService;
 
   Future<void> load() async {
-    final coordinates = await _locationService.readSaved();
-    if (coordinates == null) {
-      state = state.copyWith(needsLocation: true, isLoading: false);
-      return;
+    state = state.copyWith(isLoading: true, clearError: true);
+    try {
+      final coordinates = await _locationService.readSaved();
+      if (coordinates == null) {
+        state = state.copyWith(needsLocation: true, isLoading: false);
+        return;
+      }
+      await refresh(coordinates);
+    } catch (_) {
+      state = state.copyWith(
+        isLoading: false,
+        error: 'Could not read your saved location. Please retry.',
+      );
     }
-    await refresh(coordinates);
   }
 
   Future<void> requestLocationAndLoad() async {

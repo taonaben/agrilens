@@ -88,4 +88,6 @@ class WeatherLocationService {
   }
 
   Future<bool> openAppSettings() => Geolocator.openAppSettings();
+
+  Future<bool> openLocationSettings() => Geolocator.openLocationSettings();
 }

@@ -6,6 +6,7 @@ import 'package:agrilens/app/chat/models/conversation.dart' as model;
 import 'package:agrilens/app/chat/services/diagnosis_pipeline.dart';
 import 'package:agrilens/app/auth/services/auth_session.dart';
 import 'package:agrilens/app/shop/views/shop_page.dart';
+import 'package:agrilens/app/weather/views/weather_page.dart';
 import 'package:agrilens/shared/api/api_client.dart';
 import 'package:agrilens/shared/services/backend_diagnosis_service.dart';
 import 'package:agrilens/shared/services/backend_llm_service.dart';
@@ -214,6 +215,7 @@ class _AppState extends State<App> {
     required String pageLabel,
   }) {
     if (selectedIndex == 1) return const ShopPage();
+    if (selectedIndex == 2) return const WeatherPage();
 
     if (_initializing) {
       return const Center(child: CircularProgressIndicator());
