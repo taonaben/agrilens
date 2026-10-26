@@ -6,14 +6,14 @@ Status: `[ ]` pending; `[x]` implemented and verified. Keep a phase pending when
 
 ## Owner-approved architecture update (26 October 2026)
 
-The owner selected server-side predictions, hosted Gemini behind FastAPI, Supabase email/password Auth, Supabase Postgres history storage, and private Supabase Storage for original photos, all accessed through FastAPI. FastAPI is the source of truth for Chat; Drift, offline history, sync, and offline request queues are not in the runtime path. Legacy local conversation records are discarded once during app startup. Original photos are retained until conversation deletion. Flutter must not access Supabase database or storage APIs directly. Earlier local model and pipeline work is historical/reference only.
+The owner selected server-side predictions, hosted Gemini behind FastAPI, Supabase email/password Auth, Supabase Postgres history storage, and private Supabase Storage for original photos, all accessed through FastAPI. FastAPI is the source of truth for Chat; Drift, offline history, sync, and offline request queues are not in the runtime path. Text-only conversations are allowed for bounded maize/tomato crop-care discussion; leaf identification still requires an uploaded photo, and text-only turns cannot trigger product suggestions. Legacy local conversation records are discarded once during app startup. Original photos are retained until conversation deletion. Flutter must not access Supabase database or storage APIs directly. Earlier local model and pipeline work is historical/reference only.
 
 ### Migration sequence
 
 1. [x] Define the paginated `/v1` HTTPS contract for conversation CRUD, diagnosis uploads, conversation-scoped answers, history details, and private photo reads/deletion.
 2. [ ] Verify the server TFLite/Gemini path against the deployed model and artifacts with an authenticated request. The Gemini key must never enter the Flutter app.
 3. [ ] Verify Supabase Auth token validation and ownership isolation against a configured Supabase project. The Flutter client sends the saved bearer token on every Chat request.
-4. [x] Replace the Chat runtime with authenticated HTTPS requests and server-loaded conversation state. Keep failed requests retryable; do not queue them offline.
+4. [x] Replace the Chat runtime with authenticated HTTPS requests and server-loaded conversation state. Support text-only crop-care turns without classifier claims or product suggestions; keep failed requests retryable and do not queue them offline.
 5. [ ] Apply the Supabase Postgres schema and private Storage policies in `../backend/supabase/schema.sql`; FastAPI remains the client-facing API and uses the Supabase user token for owner-scoped access.
 6. [x] Add authenticated server conversation CRUD, image persistence/read, answer persistence, and deletion of conversation photos through FastAPI. No snapshot sync or tombstones are used.
 

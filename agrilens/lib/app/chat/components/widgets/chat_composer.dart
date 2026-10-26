@@ -63,7 +63,7 @@ class ChatComposer extends StatelessWidget {
                       }
                     },
                     decoration: InputDecoration(
-                      hintText: 'Message',
+                      hintText: 'Ask about crops or share a leaf photo',
                       filled: true,
                       fillColor: AppColors.surfaceAlt(brightness),
                       isDense: true,

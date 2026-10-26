@@ -160,3 +160,16 @@ class ConversationApiTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(saved_prediction["decision_state"], "possible_match")
         self.assertEqual(turns, [{"role": "user", "content": "What now?"}])
 
+    async def test_answer_context_allows_a_text_only_conversation(self):
+        async def fake_request(path, **kwargs):
+            if path.endswith("agrilens_conversations"):
+                return [{"id": CONVERSATION_ID}]
+            return [{"id": "7e1b5fa8-85f0-462a-8ef0-1b94bc70054f", "role": "user",
+                     "content_type": "text", "text_content": "How should I water maize?",
+                     "lifecycle": "complete"}]
+        with patch("app.conversations._request", side_effect=fake_request):
+            prediction, turns = await conversation_answer_context(
+                conversation_id=UUID(CONVERSATION_ID), token="test-token")
+        self.assertIsNone(prediction)
+        self.assertEqual(turns, [{"role": "user", "content": "How should I water maize?"}])
+

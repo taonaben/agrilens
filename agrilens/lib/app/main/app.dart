@@ -7,6 +7,7 @@ import 'package:agrilens/app/shop/views/shop_page.dart';
 import 'package:agrilens/app/weather/views/weather_page.dart';
 import 'package:agrilens/shared/api/api_client.dart';
 import 'package:agrilens/app/chat/views/chat_page.dart';
+import 'package:agrilens/shared/components/custom_progress_indicator.dart';
 import 'package:agrilens/shared/theme/app_colors.dart';
 import 'package:agrilens/shared/utils/app_constants.dart';
 import 'package:flutter/material.dart';
@@ -209,7 +210,7 @@ class _AppState extends State<App> {
     if (selectedIndex == 2) return const WeatherPage();
 
     if (_initializing) {
-      return const Center(child: CircularProgressIndicator());
+      return const Center(child: CustomProgressIndicator());
     }
 
     if (_initializationError != null) {

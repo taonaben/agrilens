@@ -57,7 +57,7 @@ async def _rpc(
 async def load_answer_context(
     *,
     bearer_token: str,
-    prediction: dict[str, Any],
+    prediction: dict[str, Any] | None,
     prior_messages: list[dict[str, str]],
     user_follow_up: str | None,
 ) -> dict[str, list[dict[str, Any]]]:
@@ -65,29 +65,35 @@ async def load_answer_context(
         f"{message.get('role', '')}: {message.get('content', '')[:500]}"
         for message in prior_messages[-4:]
     )
-    query = "\n".join(
-        part for part in (
+    query_parts = []
+    if prediction:
+        query_parts.append(
             f"Crop: {prediction.get('crop', '')}; classifier condition: {prediction.get('condition', '')}; "
-            f"decision state: {prediction.get('decision_state', '')}",
-            f"Farmer question: {(user_follow_up or '').strip()[:1000]}",
-            f"Recent context: {recent}",
-        ) if part.strip()
-    )
+            f"decision state: {prediction.get('decision_state', '')}"
+        )
+    if user_follow_up and user_follow_up.strip():
+        query_parts.append(f"Farmer question: {user_follow_up.strip()[:1000]}")
+    if recent:
+        query_parts.append(f"Recent context: {recent}")
+    query = "\n".join(query_parts)
+    if not query:
+        return {"products": [], "guidance": []}
     try:
         embedding = _vector_literal(await embed_text(query))
     except Exception as exc:
         logger.warning("AI context embedding failed: %s", exc)
         return {"products": [], "guidance": []}
 
+    product_task = (
+        _rpc("search_verified_products", bearer_token=bearer_token, embedding=embedding,
+             embedding_model=os.getenv("GEMINI_EMBEDDING_MODEL", "gemini-embedding-2"), count=8)
+        if prediction and prediction.get("decision_state") == "possible_match"
+        else asyncio.sleep(0, result=[])
+    )
     product_result, guidance_result = await asyncio.gather(
-        _rpc(
-            "search_verified_products", bearer_token=bearer_token, embedding=embedding,
-            embedding_model=os.getenv("GEMINI_EMBEDDING_MODEL", "gemini-embedding-2"), count=8,
-        ),
-        _rpc(
-            "search_reviewed_guidance", bearer_token=bearer_token, embedding=embedding,
-            embedding_model=os.getenv("GEMINI_EMBEDDING_MODEL", "gemini-embedding-2"), count=8,
-        ),
+        product_task,
+        _rpc("search_reviewed_guidance", bearer_token=bearer_token, embedding=embedding,
+             embedding_model=os.getenv("GEMINI_EMBEDDING_MODEL", "gemini-embedding-2"), count=8),
         return_exceptions=True,
     )
     if isinstance(product_result, asyncio.CancelledError):

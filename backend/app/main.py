@@ -197,7 +197,7 @@ async def answer(
         context = await context_task
         weather_data = None
 
-    product_candidates = context.get("products", [])
+    product_candidates = context.get("products", []) if prediction is not None else []
     guidance_candidates = context.get("guidance", [])
     try:
         generated: GeneratedAnswer = await generate_answer(
@@ -218,7 +218,7 @@ async def answer(
     products_by_id = {str(item.get("id")): item for item in product_candidates}
     guidance_by_id = {str(item.get("id")): item for item in guidance_candidates}
     selected_products: list[ProductSuggestion] = []
-    if prediction["decision_state"] == "possible_match":
+    if prediction is not None and prediction["decision_state"] == "possible_match":
         for product_id in dict.fromkeys(generated.product_ids):
             product = products_by_id.get(product_id)
             if product is None:

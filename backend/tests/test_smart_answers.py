@@ -121,6 +121,54 @@ class SmartAnswerTests(unittest.IsolatedAsyncioTestCase):
         self.answer_persistence_mock.assert_awaited_once()
         self.assertEqual(self.answer_persistence_mock.await_args.kwargs["metadata"]["sources"][0]["id"], SOURCE_ID)
 
+    async def test_text_only_chat_answers_without_prediction_or_product_suggestions(self):
+        self.conversation_context_mock.return_value = (None, [])
+        context = {"products": [_product()], "guidance": [_guidance()]}
+        generated = GeneratedAnswer(
+            answer="For tomatoes, keep the soil evenly moist and avoid wetting the leaves.",
+            product_ids=[PRODUCT_ID],
+            source_ids=[SOURCE_ID],
+        )
+        with (
+            patch("app.main.load_answer_context", new=AsyncMock(return_value=context)),
+            patch("app.main.generate_answer", new=AsyncMock(return_value=generated)) as generate,
+        ):
+            response = await self.client.post(
+                "/v1/answers",
+                headers={"Authorization": "Bearer user-token"},
+                json={"conversation_id": "da622fec-94f6-4cc7-9a1f-2398f2cac944",
+                      "user_follow_up": "How should I water my tomatoes?"},
+            )
+        self.assertEqual(response.status_code, 200, response.text)
+        self.assertEqual(response.json()["products"], [])
+        self.assertEqual(len(response.json()["sources"]), 1)
+        self.assertIsNone(generate.await_args.kwargs["prediction"])
+        self.assertEqual(generate.await_args.kwargs["products"], [])
+
+    async def test_text_only_chat_answers_without_prediction_or_product_suggestions(self):
+        self.conversation_context_mock.return_value = (None, [])
+        context = {"products": [_product()], "guidance": [_guidance()]}
+        generated = GeneratedAnswer(
+            answer="For tomatoes, keep the soil evenly moist and avoid wetting the leaves.",
+            product_ids=[PRODUCT_ID],
+            source_ids=[SOURCE_ID],
+        )
+        with (
+            patch("app.main.load_answer_context", new=AsyncMock(return_value=context)),
+            patch("app.main.generate_answer", new=AsyncMock(return_value=generated)) as generate,
+        ):
+            response = await self.client.post(
+                "/v1/answers",
+                headers={"Authorization": "Bearer user-token"},
+                json={"conversation_id": "da622fec-94f6-4cc7-9a1f-2398f2cac944",
+                      "user_follow_up": "How should I water my tomatoes?"},
+            )
+        self.assertEqual(response.status_code, 200, response.text)
+        self.assertEqual(response.json()["products"], [])
+        self.assertEqual(len(response.json()["sources"]), 1)
+        self.assertIsNone(generate.await_args.kwargs["prediction"])
+        self.assertEqual(generate.await_args.kwargs["products"], [])
+
     async def test_unretrieved_ids_are_dropped_and_uncertain_scan_cannot_return_products(self):
         self.conversation_context_mock.return_value = (_prediction("uncertain"), [])
         context = {"products": [_product()], "guidance": [_guidance()]}
@@ -209,6 +257,34 @@ class SmartAnswerTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(rpc.await_count, 2)
         self.assertEqual(rpc.await_args_list[0].kwargs["embedding_model"], "gemini-embedding-2")
 
+    async def test_text_only_semantic_retrieval_searches_reviewed_guidance_not_products(self):
+        with (
+            patch("app.ai_context.embed_text", new=AsyncMock(return_value=[0.1] * 768)),
+            patch("app.ai_context._rpc", new=AsyncMock(return_value=[_guidance()])) as rpc,
+        ):
+            context = await ai_context.load_answer_context(
+                bearer_token="user-token", prediction=None, prior_messages=[],
+                user_follow_up="How should I water my tomatoes?",
+            )
+        self.assertEqual(context["products"], [])
+        self.assertEqual(context["guidance"], [_guidance()])
+        rpc.assert_awaited_once()
+        self.assertEqual(rpc.await_args.args[0], "search_reviewed_guidance")
+
+    async def test_text_only_semantic_retrieval_searches_reviewed_guidance_not_products(self):
+        with (
+            patch("app.ai_context.embed_text", new=AsyncMock(return_value=[0.1] * 768)),
+            patch("app.ai_context._rpc", new=AsyncMock(return_value=[_guidance()])) as rpc,
+        ):
+            context = await ai_context.load_answer_context(
+                bearer_token="user-token", prediction=None, prior_messages=[],
+                user_follow_up="How should I water my tomatoes?",
+            )
+        self.assertEqual(context["products"], [])
+        self.assertEqual(context["guidance"], [_guidance()])
+        rpc.assert_awaited_once()
+        self.assertEqual(rpc.await_args.args[0], "search_reviewed_guidance")
+
     async def test_gemini_receives_context_and_returns_structured_fields(self):
         response = SimpleNamespace(
             candidates=[],
@@ -247,6 +323,28 @@ class SmartAnswerTests(unittest.IsolatedAsyncioTestCase):
         self.assertIn(SOURCE_ID, call.kwargs["contents"])
         self.assertEqual(call.kwargs["config"].response_mime_type, "application/json")
         self.assertEqual(generated.answer, "Rain is forecast soon.")
+
+    async def test_gemini_text_only_prompt_does_not_claim_image_analysis(self):
+        response = SimpleNamespace(candidates=[], parsed=None,
+            text='{"answer":"Please attach a photo for a leaf assessment.","product_ids":[],"source_ids":[]}')
+        class FakeAsyncClient:
+            def __init__(self):
+                self.models = SimpleNamespace(generate_content=AsyncMock(return_value=response))
+        class FakeAio:
+            async def __aenter__(self):
+                self.client = FakeAsyncClient()
+                return self.client
+            async def __aexit__(self, *_args):
+                return None
+        fake_client = SimpleNamespace(aio=FakeAio())
+        with patch.dict(os.environ, {"GEMINI_API_KEY": "test-key"}), patch(
+            "app.gemini.genai.Client", return_value=fake_client
+        ):
+            await generate_answer(prediction=None, prior_messages=[],
+                user_follow_up="What disease is on my maize leaf?", guidance=[], products=[])
+        prompt = fake_client.aio.client.models.generate_content.await_args.kwargs["contents"]
+        self.assertIn("No classifier result is attached", prompt)
+        self.assertIn("ask them to attach a photo", prompt)
 
     async def test_embedding_batch_uses_individual_contents_and_768_dimensions(self):
         returned = [SimpleNamespace(values=[0.1] * 768), SimpleNamespace(values=[0.2] * 768)]

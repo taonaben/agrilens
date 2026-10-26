@@ -200,18 +200,23 @@ async def save_diagnosis(*, conversation_id: UUID, user_id: str, token: str,
         raise
 
 
-async def conversation_answer_context(*, conversation_id: UUID, token: str) -> tuple[dict[str, Any], list[dict[str, str]]]:
+async def conversation_answer_context(*, conversation_id: UUID, token: str) -> tuple[dict[str, Any] | None, list[dict[str, str]]]:
     await _owned_conversation(conversation_id, token=token)
     messages = await _request("/rest/v1/agrilens_messages", token=token,
                               params={"select": "id,role,content_type,text_content,lifecycle,created_at",
                                       "conversation_id": f"eq.{conversation_id}", "order": "created_at.asc", "limit": "500"})
     image_ids = [row["id"] for row in messages or [] if row.get("content_type") == "image"]
-    if not image_ids:
-        raise HTTPException(409, "Analyze a leaf photo before asking a follow-up")
-    predictions = await _request("/rest/v1/agrilens_predictions", token=token,
-                                 params={"select": "*", "message_id": f"in.({','.join(image_ids)})", "order": "created_at.desc"})
+    predictions = []
+    for start in range(0, len(image_ids), 100):
+        ids = image_ids[start:start + 100]
+        predictions.extend(await _request("/rest/v1/agrilens_predictions", token=token,
+            params={"select": "*", "message_id": f"in.({','.join(ids)})", "order": "created_at.desc"}) or [])
     if not predictions:
-        raise HTTPException(409, "The latest leaf image has no saved prediction")
+        prior = [{"role": row["role"], "content": row["text_content"]}
+                 for row in messages or [] if row.get("content_type") == "text"
+                 and row.get("lifecycle") == "complete" and row.get("text_content")]
+        return None, prior
+    predictions.sort(key=lambda item: item.get("created_at", ""), reverse=True)
     prediction = predictions[0]
     prediction["decision_state"] = prediction["decision_state"].replace("possibleMatch", "possible_match").replace("unsupportedOrUnclear", "unsupported_or_unclear")
     prior = [{"role": row["role"], "content": row["text_content"]}

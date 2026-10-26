@@ -54,6 +54,8 @@ The initial guidance seed contains only general tomato water-management context 
 
 The Chat app requires network access for all diagnosis, answers, and history reads. Apply `supabase/schema.sql` before using Chat; it includes the private `agrilens-history` bucket and the `response_metadata` column used to retain answer citations and product suggestions.
 
+Text-only conversations are supported for bounded maize/tomato crop-care questions and greetings. When no prediction exists, the answer service searches reviewed guidance only, never suggests products, and asks for a photo if the user asks it to identify a leaf. It must not infer that a user-described condition is present on their plant.
+
 ## Contract limits
 
 The prototype-similarity rejection check is unavailable because the training artifacts contain no portable class prototypes. The response leaves `prototype_similarity` null and uses only calibrated confidence and margin. The service does not treat a healthy class as proof of plant health.

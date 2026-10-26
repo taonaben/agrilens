@@ -1,4 +1,5 @@
 import 'package:agrilens/app/chat/components/widgets/message_bubble.dart';
+import 'package:agrilens/app/chat/components/widgets/chat_message_list.dart';
 import 'package:agrilens/app/chat/components/widgets/pending_image_preview_card.dart';
 import 'package:agrilens/app/chat/models/message.dart';
 import 'package:flutter/material.dart';
@@ -19,6 +20,28 @@ MessageModel _message({required MessageRole role, required String text}) {
 }
 
 void main() {
+  testWidgets('empty chat explains text-only and photo options', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: Scaffold(
+          body: ChatMessageList(
+            isLoading: false,
+            messages: [],
+            predictionsByMessageId: {},
+          ),
+        ),
+      ),
+    );
+
+    expect(
+      find.textContaining('Ask a maize or tomato question'),
+      findsOneWidget,
+    );
+    expect(find.textContaining('share a leaf photo'), findsOneWidget);
+  });
+
   testWidgets('user messages align right and assistant messages align left', (
     tester,
   ) async {

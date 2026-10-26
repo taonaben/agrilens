@@ -2,6 +2,7 @@ import 'package:agrilens/app/chat/components/widgets/message_bubble.dart';
 import 'package:agrilens/app/chat/models/message.dart';
 import 'package:agrilens/app/chat/models/prediction.dart';
 import 'package:agrilens/app/chat/services/remote_chat_service.dart';
+import 'package:agrilens/shared/components/custom_progress_indicator.dart';
 import 'package:agrilens/shared/utils/app_constants.dart';
 import 'package:flutter/material.dart';
 
@@ -22,7 +23,7 @@ class ChatMessageList extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (isLoading) {
-      return const Center(child: CircularProgressIndicator());
+      return const Center(child: CustomProgressIndicator());
     }
 
     if (messages.isEmpty) {
@@ -30,7 +31,7 @@ class ChatMessageList extends StatelessWidget {
         child: Padding(
           padding: const EdgeInsets.all(AppConstants.paddingXLarge),
           child: Text(
-            'Start by taking or selecting a maize or tomato leaf photo.',
+            'Ask a maize or tomato crop-care question, or share a leaf photo for a possible condition match.',
             textAlign: TextAlign.center,
             style: Theme.of(context).textTheme.bodyLarge,
           ),

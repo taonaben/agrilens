@@ -240,7 +240,7 @@ class _ChatPageState extends State<ChatPage> {
     if (text.isEmpty) return;
     setState(() {
       _busy = true;
-      _busyLabel = 'Getting a response from AgriLens...';
+      _busyLabel = 'Thinking...';
       _inlineError = null;
     });
     try {

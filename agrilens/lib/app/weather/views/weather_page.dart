@@ -6,6 +6,7 @@ import 'package:agrilens/app/weather/components/weather_section_card.dart';
 import 'package:agrilens/app/weather/components/weather_state_panel.dart';
 import 'package:agrilens/app/weather/services/weather_location_service.dart';
 import 'package:agrilens/app/weather/state/weather_provider.dart';
+import 'package:agrilens/shared/components/custom_progress_indicator.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:solar_icons/solar_icons.dart';
@@ -154,7 +155,7 @@ class _PageHeading extends StatelessWidget {
             padding: EdgeInsets.all(12),
             child: SizedBox.square(
               dimension: 19,
-              child: CircularProgressIndicator(strokeWidth: 2),
+              child: CustomProgressIndicator()
             ),
           )
         else

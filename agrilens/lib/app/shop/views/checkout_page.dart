@@ -1,3 +1,4 @@
+import 'package:agrilens/shared/components/custom_progress_indicator.dart';
 import 'package:agrilens/shared/components/custom_textfield.dart';
 import 'package:agrilens/shared/utils/app_constants.dart';
 import 'package:flutter/material.dart';
@@ -107,9 +108,7 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
                             _submitting
                                 ? const SizedBox.square(
                                   dimension: 20,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                  ),
+                                  child: CustomProgressIndicator(),
                                 )
                                 : const Text('Place order'),
                       ),
