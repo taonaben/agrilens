@@ -9,13 +9,13 @@ __pycache__/
 .venv/
 venv/
 .git/
-*.tflite
-*.gguf
-artifacts/
-!artifacts/
-!artifacts/agrilens_model.tflite
-!artifacts/class_map.json
-!artifacts/preprocess_contract.json
-!artifacts/rejection_policy.json
-!models/
-!models/agrilens_model.tflite
+# *.tflite
+# *.gguf
+# artifacts/
+# !artifacts/
+# !artifacts/agrilens_model.tflite
+# !artifacts/class_map.json
+# !artifacts/preprocess_contract.json
+# !artifacts/rejection_policy.json
+# !models/
+# !models/agrilens_model.tflite
