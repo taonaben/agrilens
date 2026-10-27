@@ -1,0 +1,44 @@
+{
+  "split_manifest": "C:\\Users\\baabyface\\Documents\\my work\\agrilens\\agrilens-training\\artifacts\\manifest_v2.csv",
+  "num_classes": 9,
+  "labels": [
+    "maize__common_rust",
+    "maize__northern_leaf_blight",
+    "maize__gray_leaf_spot",
+    "maize__healthy",
+    "tomato__bacterial_spot",
+    "tomato__early_blight",
+    "tomato__late_blight",
+    "tomato__leaf_mold",
+    "tomato__healthy"
+  ],
+  "imbalance_mode": "class_weighted_loss",
+  "class_weights": [
+    0.9059035008537478,
+    1.0965508268679618,
+    2.104522339030712,
+    0.9281615721277957,
+    0.5074033040376263,
+    1.0793193138743225,
+    0.5655116165509174,
+    1.134419699267306,
+    0.67820782738961
+  ],
+  "train_size": 8001,
+  "val_size": 1716,
+  "test_size": 1714,
+  "best_epoch": 15,
+  "best_val_loss": 0.05785628458541858,
+  "final_val": {
+    "loss": 0.05785628458541858,
+    "acc": 0.9790209790209791
+  },
+  "final_test": {
+    "loss": 0.06040201883202325,
+    "acc": 0.9737456242707118
+  },
+  "checkpoints": {
+    "best": "C:\\Users\\baabyface\\Documents\\my work\\agrilens\\agrilens-training\\artifacts\\mobilenetv3_head_best.pt",
+    "last": "C:\\Users\\baabyface\\Documents\\my work\\agrilens\\agrilens-training\\artifacts\\mobilenetv3_head_last.pt"
+  }
+}
