@@ -139,6 +139,7 @@ async def diagnose(
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     except ModelContractError as exc:
+        logger.exception("Diagnosis model contract error; conversation_id=%s", conversation_id)
         raise HTTPException(status_code=503, detail="The diagnosis model is unavailable") from exc
     response = PredictionResponse(**prediction.__dict__)
     await save_diagnosis(conversation_id=conversation_id, user_id=user_id, token=bearer_token,
