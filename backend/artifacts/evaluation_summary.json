@@ -1,0 +1,13 @@
+{
+  "checkpoint": "C:\\Users\\baabyface\\Documents\\my work\\agrilens\\agrilens-training\\artifacts\\mobilenetv3_finetune_best.pt",
+  "val": {
+    "loss": 0.025662686206445306,
+    "acc": 0.9906759906759907,
+    "macro_f1": 0.9842969158278814
+  },
+  "test": {
+    "loss": 0.027087300906816398,
+    "acc": 0.9912485414235706,
+    "macro_f1": 0.9868198826004458
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "temperature": 1.0282130241394043,
+  "confidence_threshold": 0.8,
+  "margin_threshold": 0.15,
+  "prototype_similarity_threshold": 0.72,
+  "decision_policy": {
+    "possible_match": "top_logit_after_temperature_scaling and margin/confidence/prototype checks pass",
+    "uncertain": "low confidence or low margin or low prototype similarity",
+    "unsupported_or_unclear": "image quality issues, broad mismatch to class prototypes, or low confidence after calibration"
+  }
+}

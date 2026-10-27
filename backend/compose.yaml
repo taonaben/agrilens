@@ -18,8 +18,8 @@ services:
       - "${AGRILENS_API_PORT:-8888}:8888"
     volumes:
       - ./app:/app/app
-      - ../agrilens/assets/models/agrilens_model.tflite:/models/agrilens_model.tflite:ro
-      - ../agrilens-training/artifacts:/models/artifacts:ro
+      - ./artifacts/agrilens_model.tflite:/models/agrilens_model.tflite:ro
+      - ./artifacts:/models/artifacts:ro
     command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8888", "--reload", "--reload-dir", "/app"]
     restart: unless-stopped
   redis:
@@ -30,4 +30,16 @@ services:
       interval: 5s
       timeout: 3s
       retries: 10
+    restart: unless-stopped
+  health-pinger:
+    image: curlimages/curl:8.12.1
+    command:
+      - sh
+      - -c
+      - |
+        while true; do
+          date -u '+%Y-%m-%dT%H:%M:%SZ'
+          curl --fail --silent --show-error --output /dev/null --write-out 'Health ping: HTTP %{http_code}\n' https://agrilens-es4o.onrender.com/health || echo 'Health ping failed'
+          sleep 300
+        done
     restart: unless-stopped
