@@ -8,7 +8,6 @@ import '../../../shared/api/api_client.dart';
 import '../models/conversation.dart';
 import '../models/message.dart';
 import '../models/prediction.dart';
-import 'diagnosis_result.dart' show ClassMap;
 
 class AnswerSource {
   const AnswerSource({
@@ -297,12 +296,14 @@ class RemoteChatService {
 
   static Prediction _prediction(Map<String, dynamic> json, String messageId) {
     final classId = json['class_id'] as int;
-    final classEntry = ClassMap.byId(classId);
-    if (classEntry == null ||
-        classEntry.crop != json['crop'] ||
-        classEntry.condition != json['condition']) {
+    final crop = json['crop'] as String?;
+    final condition = json['condition'] as String?;
+    if (classId < 0 ||
+        (crop != 'maize' && crop != 'tomato') ||
+        condition == null ||
+        condition.trim().isEmpty) {
       throw const FormatException(
-        'The saved prediction does not match the supported class map.',
+        'The saved prediction has invalid crop-condition metadata.',
       );
     }
     final state = switch (json['decision_state']) {
@@ -315,8 +316,8 @@ class RemoteChatService {
       id: json['id'] as String? ?? 'prediction-$messageId',
       messageId: (json['message_id'] as String?) ?? messageId,
       classId: classId,
-      crop: classEntry.crop,
-      condition: classEntry.condition,
+      crop: crop!,
+      condition: condition,
       decisionState: state,
       topLogit: (json['top_logit'] as num?)?.toDouble() ?? 0,
       calibratedScore: (json['calibrated_score'] as num).toDouble(),

@@ -513,16 +513,15 @@ class DiagnosisPipeline {
   /// Reconstruct a [DiagnosisResult] from a saved [Prediction].
   /// Used for follow-up questions and retry flows.
   DiagnosisResult _reconstructDiagnosisResult(Prediction prediction) {
-    final classEntry = ClassMap.byId(prediction.classId);
+    final classEntry = ClassEntry(
+      id: prediction.classId,
+      crop: prediction.crop,
+      condition: prediction.condition,
+      label: '${prediction.crop}__${prediction.condition}',
+    );
 
-    if (prediction.failureReason != null || classEntry == null) {
+    if (prediction.failureReason != null) {
       // Stored as an uncertain/failure result
-      if (classEntry == null) {
-        return DiagnosisFailure(
-          kind: DiagnosisFailureKind.outputLayoutMismatch,
-          message: 'Class ID ${prediction.classId} not found in class map.',
-        );
-      }
       return DiagnosisUncertain(
         topClass: classEntry,
         calibratedScore: prediction.calibratedScore,

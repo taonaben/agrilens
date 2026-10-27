@@ -1,6 +1,6 @@
 # AgriLens FastAPI service
 
-This service runs the nine-class TFLite classifier and requests bounded explanations from Gemini. Every protected endpoint requires a valid Supabase Auth access token; the Gemini key stays in the backend environment. The approved history design stores conversations in Supabase Postgres and original photos in the private `agrilens-history` Storage bucket, with FastAPI mediating all client access. Photos are retained until conversation deletion.
+This service runs the active versioned crop-condition TFLite classifier and requests bounded explanations from Gemini. Every protected endpoint requires a valid Supabase Auth access token; the Gemini key stays in the backend environment. The approved history design stores conversations in Supabase Postgres and original photos in the private `agrilens-history` Storage bucket, with FastAPI mediating all client access. Photos are retained until conversation deletion.
 
 ## Container setup
 
@@ -16,7 +16,7 @@ Use Linux x86_64 or ARM64 with CPython 3.11, supported by the available `tflite-
 
 Run with `uvicorn --env-file .env app.main:app --host 0.0.0.0 --port 8000` from this directory. Flutter should call the service over HTTPS in deployed environments. Local HTTP is for development only.
 
-The deployed service must be given `agrilens_model.tflite` and the three versioned contract files (`class_map.json`, `preprocess_contract.json`, `rejection_policy.json`). The Flutter model assets are git-ignored today, so they are not automatically present in a deployment checkout.
+Keep the current nine-class bundle together until the expanded model is trained and exported. Stage a v2 bundle with its matching `agrilens_model.tflite`, `class_map.json`, `preprocess_contract.json`, and `rejection_policy.json`, then switch the model and contract files together. For local Compose, set `AGRILENS_MODEL_HOST_PATH` and `AGRILENS_ARTIFACTS_HOST_DIR` in `.env` to the v2 bundle locations. Production deployments must package or mount all four matching files. The Flutter model assets are git-ignored today, so they are not automatically present in a deployment checkout.
 
 ## API
 

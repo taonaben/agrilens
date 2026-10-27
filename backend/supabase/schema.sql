@@ -38,7 +38,7 @@ create table if not exists public.agrilens_predictions (
   id uuid primary key,
   owner_id uuid not null references auth.users(id) on delete cascade,
   message_id uuid not null unique references public.agrilens_messages(id) on delete cascade,
-  class_id integer not null check (class_id between 0 and 8),
+  class_id integer not null check (class_id >= 0),
   crop text not null check (crop in ('maize', 'tomato')),
   condition text not null,
   decision_state text not null check (decision_state in ('possibleMatch', 'uncertain', 'unsupportedOrUnclear')),
@@ -51,6 +51,11 @@ create table if not exists public.agrilens_predictions (
   failure_reason text,
   created_at timestamptz not null
 );
+
+alter table public.agrilens_predictions
+  drop constraint if exists agrilens_predictions_class_id_check;
+alter table public.agrilens_predictions
+  add constraint agrilens_predictions_class_id_check check (class_id >= 0);
 
 -- Tombstones preserve offline conversation deletions until other devices sync.
 create table if not exists public.agrilens_conversation_deletions (

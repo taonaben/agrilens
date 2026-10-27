@@ -49,7 +49,7 @@ app.include_router(guidance_router)
 
 
 class PredictionResponse(BaseModel):
-    class_id: int = Field(ge=0, le=8)
+    class_id: int = Field(ge=0)
     crop: Literal["maize", "tomato"]
     condition: str
     decision_state: Literal["possible_match", "uncertain", "unsupported_or_unclear"]

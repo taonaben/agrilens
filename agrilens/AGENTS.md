@@ -4,7 +4,7 @@ Read `goal.md` and `plan.md` before starting. Inspect the current code and `git 
 
 ## Mission and authority
 
-Build the smallest complete, testable slice of AgriLens's maize/tomato leaf diagnosis flow. Follow the nine-class model contract in the sibling `agrilens-training/artifacts` directory. Treat `goal.md` as the product objective and `plan.md` as the work sequence. The current Chat runtime is server-backed: FastAPI owns inference, answers, and conversation history; do not add offline history or sync unless the owner changes that direction.
+Build the smallest complete, testable slice of AgriLens's maize/tomato leaf diagnosis flow. Follow the active versioned model contract; the training workspace defines the 34-class v2 taxonomy while the current nine-class v1 serving bundle remains active until v2 model artifacts are ready. Treat `goal.md` as the product objective and `plan.md` as the work sequence. The current Chat runtime is server-backed: FastAPI owns inference, answers, and conversation history; do not add offline history or sync unless the owner changes that direction.
 
 Agents may handle scoped implementation, refactors, fixtures, and focused tests. Follow the current server-backed sequence in `plan.md`; earlier Drift/local-model work is historical and may remain for tests or reference, but must not run in Chat. Do not use fake predictions or scripted responses in the running app; deterministic test doubles belong only in tests. Keep major choices with the project owner: model/rejection changes, agricultural advice, privacy policy, release targets, and new product scope. Bring the owner concrete options and evidence, not speculative rewrites.
 

@@ -1,65 +1,308 @@
 [
   {
+    "crop": "maize",
+    "condition": "maize_streak_virus",
+    "display_name": "Maize streak virus",
+    "kind": "disease",
     "id": 0,
-    "crop": "maize",
-    "condition": "common_rust",
-    "folder": "Corn_(maize)___Common_rust_",
-    "label": "maize__common_rust"
+    "label": "maize__maize_streak_virus",
+    "folder": "maize__maize_streak_virus"
   },
   {
-    "id": 1,
-    "crop": "maize",
-    "condition": "northern_leaf_blight",
-    "folder": "Corn_(maize)___Northern_Leaf_Blight",
-    "label": "maize__northern_leaf_blight"
-  },
-  {
-    "id": 2,
     "crop": "maize",
     "condition": "gray_leaf_spot",
-    "folder": "Corn_(maize)___Cercospora_leaf_spot Gray_leaf_spot",
-    "label": "maize__gray_leaf_spot"
+    "display_name": "Grey leaf spot",
+    "kind": "disease",
+    "id": 1,
+    "label": "maize__gray_leaf_spot",
+    "folder": "maize__gray_leaf_spot"
   },
   {
+    "crop": "maize",
+    "condition": "northern_leaf_blight",
+    "display_name": "Northern corn leaf blight",
+    "kind": "disease",
+    "id": 2,
+    "label": "maize__northern_leaf_blight",
+    "folder": "maize__northern_leaf_blight"
+  },
+  {
+    "crop": "maize",
+    "condition": "common_rust",
+    "display_name": "Common rust",
+    "kind": "disease",
     "id": 3,
+    "label": "maize__common_rust",
+    "folder": "maize__common_rust"
+  },
+  {
+    "crop": "maize",
+    "condition": "diplodia_ear_rot",
+    "display_name": "Diplodia ear rot",
+    "kind": "disease",
+    "id": 4,
+    "label": "maize__diplodia_ear_rot",
+    "folder": "maize__diplodia_ear_rot"
+  },
+  {
+    "crop": "maize",
+    "condition": "fusarium_ear_rot",
+    "display_name": "Fusarium ear rot",
+    "kind": "disease",
+    "id": 5,
+    "label": "maize__fusarium_ear_rot",
+    "folder": "maize__fusarium_ear_rot"
+  },
+  {
+    "crop": "maize",
+    "condition": "bacterial_stalk_rot",
+    "display_name": "Bacterial stalk rot",
+    "kind": "disease",
+    "id": 6,
+    "label": "maize__bacterial_stalk_rot",
+    "folder": "maize__bacterial_stalk_rot"
+  },
+  {
+    "crop": "maize",
+    "condition": "downy_mildew",
+    "display_name": "Downy mildew",
+    "kind": "disease",
+    "id": 7,
+    "label": "maize__downy_mildew",
+    "folder": "maize__downy_mildew"
+  },
+  {
     "crop": "maize",
     "condition": "healthy",
-    "folder": "Corn_(maize)___healthy",
-    "label": "maize__healthy"
+    "display_name": "Healthy",
+    "kind": "healthy",
+    "id": 8,
+    "label": "maize__healthy",
+    "folder": "maize__healthy"
   },
   {
-    "id": 4,
-    "crop": "tomato",
-    "condition": "bacterial_spot",
-    "folder": "Tomato___Bacterial_spot",
-    "label": "tomato__bacterial_spot"
+    "crop": "maize",
+    "condition": "fall_armyworm",
+    "display_name": "Fall armyworm",
+    "kind": "pest",
+    "id": 9,
+    "label": "maize__fall_armyworm",
+    "folder": "maize__fall_armyworm"
   },
   {
-    "id": 5,
+    "crop": "maize",
+    "condition": "maize_stem_borer",
+    "display_name": "Maize stem borer",
+    "kind": "pest",
+    "id": 10,
+    "label": "maize__maize_stem_borer",
+    "folder": "maize__maize_stem_borer"
+  },
+  {
+    "crop": "maize",
+    "condition": "african_armyworm",
+    "display_name": "African armyworm",
+    "kind": "pest",
+    "id": 11,
+    "label": "maize__african_armyworm",
+    "folder": "maize__african_armyworm"
+  },
+  {
+    "crop": "maize",
+    "condition": "cutworm",
+    "display_name": "Cutworms",
+    "kind": "pest",
+    "id": 12,
+    "label": "maize__cutworm",
+    "folder": "maize__cutworm"
+  },
+  {
+    "crop": "maize",
+    "condition": "maize_leafhopper",
+    "display_name": "Maize leafhoppers",
+    "kind": "pest",
+    "id": 13,
+    "label": "maize__maize_leafhopper",
+    "folder": "maize__maize_leafhopper"
+  },
+  {
+    "crop": "maize",
+    "condition": "corn_leaf_aphid",
+    "display_name": "Corn leaf aphids",
+    "kind": "pest",
+    "id": 14,
+    "label": "maize__corn_leaf_aphid",
+    "folder": "maize__corn_leaf_aphid"
+  },
+  {
+    "crop": "maize",
+    "condition": "termite",
+    "display_name": "Termites",
+    "kind": "pest",
+    "id": 15,
+    "label": "maize__termite",
+    "folder": "maize__termite"
+  },
+  {
+    "crop": "maize",
+    "condition": "corn_earworm",
+    "display_name": "Corn earworm",
+    "kind": "pest",
+    "id": 16,
+    "label": "maize__corn_earworm",
+    "folder": "maize__corn_earworm"
+  },
+  {
     "crop": "tomato",
     "condition": "early_blight",
-    "folder": "Tomato___Early_blight",
-    "label": "tomato__early_blight"
+    "display_name": "Early blight",
+    "kind": "disease",
+    "id": 17,
+    "label": "tomato__early_blight",
+    "folder": "tomato__early_blight"
   },
   {
-    "id": 6,
     "crop": "tomato",
     "condition": "late_blight",
-    "folder": "Tomato___Late_blight",
-    "label": "tomato__late_blight"
+    "display_name": "Late blight",
+    "kind": "disease",
+    "id": 18,
+    "label": "tomato__late_blight",
+    "folder": "tomato__late_blight"
   },
   {
-    "id": 7,
     "crop": "tomato",
-    "condition": "leaf_mold",
-    "folder": "Tomato___Leaf_Mold",
-    "label": "tomato__leaf_mold"
+    "condition": "bacterial_wilt",
+    "display_name": "Bacterial wilt",
+    "kind": "disease",
+    "id": 19,
+    "label": "tomato__bacterial_wilt",
+    "folder": "tomato__bacterial_wilt"
   },
   {
-    "id": 8,
+    "crop": "tomato",
+    "condition": "fusarium_wilt",
+    "display_name": "Fusarium wilt",
+    "kind": "disease",
+    "id": 20,
+    "label": "tomato__fusarium_wilt",
+    "folder": "tomato__fusarium_wilt"
+  },
+  {
+    "crop": "tomato",
+    "condition": "tomato_yellow_leaf_curl_virus",
+    "display_name": "Tomato yellow leaf curl virus",
+    "kind": "disease",
+    "id": 21,
+    "label": "tomato__tomato_yellow_leaf_curl_virus",
+    "folder": "tomato__tomato_yellow_leaf_curl_virus"
+  },
+  {
+    "crop": "tomato",
+    "condition": "septoria_leaf_spot",
+    "display_name": "Septoria leaf spot",
+    "kind": "disease",
+    "id": 22,
+    "label": "tomato__septoria_leaf_spot",
+    "folder": "tomato__septoria_leaf_spot"
+  },
+  {
+    "crop": "tomato",
+    "condition": "powdery_mildew",
+    "display_name": "Powdery mildew",
+    "kind": "disease",
+    "id": 23,
+    "label": "tomato__powdery_mildew",
+    "folder": "tomato__powdery_mildew"
+  },
+  {
+    "crop": "tomato",
+    "condition": "damping_off",
+    "display_name": "Damping-off",
+    "kind": "disease",
+    "id": 24,
+    "label": "tomato__damping_off",
+    "folder": "tomato__damping_off"
+  },
+  {
     "crop": "tomato",
     "condition": "healthy",
-    "folder": "Tomato___healthy",
-    "label": "tomato__healthy"
+    "display_name": "Healthy",
+    "kind": "healthy",
+    "id": 25,
+    "label": "tomato__healthy",
+    "folder": "tomato__healthy"
+  },
+  {
+    "crop": "tomato",
+    "condition": "tuta_absoluta",
+    "display_name": "Tuta absoluta / tomato leaf miner",
+    "kind": "pest",
+    "id": 26,
+    "label": "tomato__tuta_absoluta",
+    "folder": "tomato__tuta_absoluta"
+  },
+  {
+    "crop": "tomato",
+    "condition": "red_spider_mite",
+    "display_name": "Red spider mites",
+    "kind": "pest",
+    "id": 27,
+    "label": "tomato__red_spider_mite",
+    "folder": "tomato__red_spider_mite"
+  },
+  {
+    "crop": "tomato",
+    "condition": "whitefly",
+    "display_name": "Whiteflies",
+    "kind": "pest",
+    "id": 28,
+    "label": "tomato__whitefly",
+    "folder": "tomato__whitefly"
+  },
+  {
+    "crop": "tomato",
+    "condition": "root_knot_nematode",
+    "display_name": "Root-knot nematodes",
+    "kind": "pest",
+    "id": 29,
+    "label": "tomato__root_knot_nematode",
+    "folder": "tomato__root_knot_nematode"
+  },
+  {
+    "crop": "tomato",
+    "condition": "tomato_fruitworm",
+    "display_name": "Tomato fruitworm / American bollworm",
+    "kind": "pest",
+    "id": 30,
+    "label": "tomato__tomato_fruitworm",
+    "folder": "tomato__tomato_fruitworm"
+  },
+  {
+    "crop": "tomato",
+    "condition": "aphid",
+    "display_name": "Aphids",
+    "kind": "pest",
+    "id": 31,
+    "label": "tomato__aphid",
+    "folder": "tomato__aphid"
+  },
+  {
+    "crop": "tomato",
+    "condition": "cutworm",
+    "display_name": "Cutworms",
+    "kind": "pest",
+    "id": 32,
+    "label": "tomato__cutworm",
+    "folder": "tomato__cutworm"
+  },
+  {
+    "crop": "tomato",
+    "condition": "thrips",
+    "display_name": "Thrips",
+    "kind": "pest",
+    "id": 33,
+    "label": "tomato__thrips",
+    "folder": "tomato__thrips"
   }
 ]

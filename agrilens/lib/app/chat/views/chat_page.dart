@@ -192,8 +192,8 @@ class _ChatPageState extends ConsumerState<ChatPage> {
         () =>
             _inlineError =
                 source == ImageSource.camera
-                    ? 'Camera permission is required to capture a leaf photo.'
-                    : 'Photo access permission is required to choose a leaf photo.',
+                    ? 'Camera permission is required to photograph a maize or tomato pest or crop symptom.'
+                    : 'Photo access permission is required to choose a maize or tomato pest or crop symptom photo.',
       );
       return;
     }
@@ -251,7 +251,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     }
     setState(() {
       _busy = true;
-      _busyLabel = 'Sending leaf image to AgriLens...';
+      _busyLabel = 'Sending crop photo to AgriLens...';
       _inlineError = null;
     });
     try {
