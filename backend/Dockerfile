@@ -12,6 +12,8 @@ RUN pip install --no-cache-dir --upgrade pip \
     && pip install --no-cache-dir -r requirements.txt
 
 COPY app ./app
+COPY artifacts/agrilens_model.tflite /models/agrilens_model.tflite
+COPY artifacts/class_map.json artifacts/preprocess_contract.json artifacts/rejection_policy.json /models/artifacts/
 
 RUN useradd --system --uid 10001 --create-home appuser
 USER appuser
