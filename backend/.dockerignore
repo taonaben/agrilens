@@ -17,3 +17,5 @@ artifacts/
 !artifacts/class_map.json
 !artifacts/preprocess_contract.json
 !artifacts/rejection_policy.json
+!models/
+!models/agrilens_model.tflite

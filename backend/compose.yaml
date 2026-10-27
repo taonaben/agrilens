@@ -18,7 +18,7 @@ services:
       - "${AGRILENS_API_PORT:-8888}:8888"
     volumes:
       - ./app:/app/app
-      - ./artifacts/agrilens_model.tflite:/models/agrilens_model.tflite:ro
+      - ./models/agrilens_model.tflite:/models/agrilens_model.tflite:ro
       - ./artifacts:/models/artifacts:ro
     command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8888", "--reload", "--reload-dir", "/app"]
     restart: unless-stopped
