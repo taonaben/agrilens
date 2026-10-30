@@ -33,7 +33,7 @@ class ChatMessageList extends StatelessWidget {
         child: Padding(
           padding: const EdgeInsets.all(AppConstants.paddingXLarge),
           child: Text(
-            'Ask a maize or tomato crop-care question, or share a leaf photo for a possible condition match.',
+            'Ask a maize or tomato crop-care question, or share a pest or crop-symptom photo for a possible match.',
             textAlign: TextAlign.center,
             style: Theme.of(context).textTheme.bodyLarge,
           ),

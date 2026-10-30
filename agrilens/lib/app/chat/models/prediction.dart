@@ -6,7 +6,7 @@ enum DecisionState { possibleMatch, uncertain, unsupportedOrUnclear }
 class Prediction {
   final String id;
   final String messageId;
-  final int classId; // 0-8 from class_map.json
+  final int classId; // Ordered ID from the model version's class map
   final String crop; // "maize" or "tomato"
   final String condition; // e.g., "common_rust", "healthy"
   final DecisionState decisionState;

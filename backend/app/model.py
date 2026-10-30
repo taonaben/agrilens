@@ -56,12 +56,21 @@ class DiagnosisModel:
         self.temperature = float(rejection["temperature"])
         self.confidence_threshold = float(rejection["confidence_threshold"])
         self.margin_threshold = float(rejection["margin_threshold"])
-        self.model_version = "v1_mobilenetv3"
+        self.num_classes = len(self.class_map)
+        self.model_version = (
+            "v1_mobilenetv3" if self.num_classes == 9
+            else f"v2_{self.num_classes}class_mobilenetv3"
+        )
         self.preprocess_version = "v1_224_imagenet"
 
-        if [item["id"] for item in self.class_map] != list(range(9)):
-            raise ModelContractError("class_map.json must contain the exact ordered IDs 0 through 8")
-        if self.input_size != 224 or len(self.class_map) != 9:
+        if not self.num_classes or [item["id"] for item in self.class_map] != list(range(self.num_classes)):
+            raise ModelContractError("class_map.json must contain contiguous ordered IDs starting at 0")
+        if any(not item.get("crop") or not item.get("condition") for item in self.class_map):
+            raise ModelContractError("Every class map entry must define crop and condition")
+        class_keys = [(item["crop"], item["condition"]) for item in self.class_map]
+        if len(class_keys) != len(set(class_keys)):
+            raise ModelContractError("class_map.json contains duplicate crop-condition entries")
+        if self.input_size != 224:
             raise ModelContractError("Unexpected AgriLens image or class contract")
 
         self.interpreter = Interpreter(model_path=str(model_path), num_threads=2)
@@ -71,7 +80,7 @@ class DiagnosisModel:
         if len(inputs) != 1 or inputs[0]["dtype"] != np.float32:
             raise ModelContractError("Expected one float32 model input tensor")
         self.input = inputs[0]
-        self.logits_output = self._find_output(outputs, (1, 9), required=True)
+        self.logits_output = self._find_output(outputs, (1, self.num_classes), required=True)
         self.embedding_output = self._find_output(outputs, (1, 576), required=False)
         if self.logits_output["dtype"] != np.float32:
             raise ModelContractError("Expected float32 classifier logits")
@@ -110,10 +119,10 @@ class DiagnosisModel:
         self.interpreter.invoke()
         logits = np.asarray(self.interpreter.get_tensor(self.logits_output["index"])[0], dtype=np.float64)
 
-        if logits.shape != (9,) or not np.isfinite(logits).all():
+        if logits.shape != (self.num_classes,) or not np.isfinite(logits).all():
             raise ModelContractError("Model returned invalid logits")
         if float(np.max(logits) - np.min(logits)) < 1e-5:
-            raise ValueError("The image did not produce a supported leaf result. Try a clearer leaf photo.")
+            raise ValueError("The image did not produce a supported crop-condition result. Try a clearer crop photo.")
 
         probabilities = _softmax(logits / self.temperature)
         order = np.argsort(probabilities)

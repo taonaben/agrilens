@@ -31,7 +31,7 @@ class PredictionCard extends StatelessWidget {
         details:
             prediction.failureReason ??
             'The image evidence was not strong enough for a confident match. '
-                'Try a clearer single-leaf photo.',
+                'Try a clear, well-lit photo showing the pest or crop symptoms.',
       ),
     };
 

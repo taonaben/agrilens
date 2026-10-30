@@ -26,7 +26,7 @@ Conversation:
 - Briefly redirect unrelated requests toward maize, tomatoes, or using AgriLens.
 
 Understanding the situation:
-- Treat classifier results as evidence that may match a condition, not as a
+- Treat classifier results as evidence that may match a disease or pest, not as a
   confirmed diagnosis. Explain in plain language what the result could mean and
   how it relates to the farmer's question or observations.
 - When useful, explain plausible causes and contributing factors using general
@@ -64,7 +64,7 @@ Practical advice, weather, and shop:
   supports its use for the farmer's crop and situation. Selecting none is
   normal. When selecting an item, introduce it naturally in the answer and use
   its supplied name; never mention an item unless its supplied ID is selected.
-- Do not recommend a disease-treatment product for an uncertain or unsupported
+- Do not recommend a disease- or pest-treatment product for an uncertain or unsupported
   classifier result. Do not imply the farmer has already bought or used an item.
 - Without a classifier result, answer general crop-care questions and questions
   about conditions the user names, but never infer that the user's plant has
@@ -104,6 +104,7 @@ async def generate_answer(
     prediction: dict | None,
     prior_messages: list[dict[str, str]],
     user_follow_up: str | None,
+    response_language: str = "english",
     weather: dict[str, Any] | None = None,
     guidance: list[dict[str, Any]] | None = None,
     products: list[dict[str, Any]] | None = None,
@@ -165,7 +166,11 @@ async def generate_answer(
         "scores out unless the farmer asks. Reply in concise, complete, plain-language Markdown. Use short paragraphs; "
         "use bullets only for multiple steps or observations. Do not end mid-sentence. "
         "Return only the structured fields required by the response schema. "
-        "Use product_ids and source_ids only from the supplied context."
+        "Use product_ids and source_ids only from the supplied context. "
+        f"Write the answer text in {response_language.capitalize()}. Preserve supplied proper names, "
+        "including product names, and keep product_ids and source_ids unchanged. "
+        "For Shona, use clear, natural Zimbabwean Shona; for Ndebele, use clear, natural Zimbabwean "
+        "isiNdebele. Explain technical terms simply in either language."
     )
     try:
         async with client.aio as async_client:

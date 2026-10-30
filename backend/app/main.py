@@ -49,7 +49,7 @@ app.include_router(guidance_router)
 
 
 class PredictionResponse(BaseModel):
-    class_id: int = Field(ge=0, le=8)
+    class_id: int = Field(ge=0)
     crop: Literal["maize", "tomato"]
     condition: str
     decision_state: Literal["possible_match", "uncertain", "unsupported_or_unclear"]
@@ -65,6 +65,7 @@ class PredictionResponse(BaseModel):
 class AnswerRequest(BaseModel):
     conversation_id: UUID
     user_follow_up: str | None = Field(default=None, max_length=4000)
+    response_language: Literal["english", "shona", "ndebele"] = "english"
     latitude: float | None = Field(default=None, ge=-90, le=90)
     longitude: float | None = Field(default=None, ge=-180, le=180)
 
@@ -205,6 +206,7 @@ async def answer(
             prediction=prediction,
             prior_messages=prior_messages,
             user_follow_up=request.user_follow_up,
+            response_language=request.response_language,
             weather=weather_data,
             guidance=guidance_candidates,
             products=product_candidates,

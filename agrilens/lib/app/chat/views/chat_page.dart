@@ -16,6 +16,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:solar_icons/solar_icons.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class ChatPage extends ConsumerStatefulWidget {
   const ChatPage({
@@ -52,16 +53,38 @@ class _ChatPageState extends ConsumerState<ChatPage> {
   final Map<String, Prediction> _predictionsByMessageId = {};
   final Map<String, AnswerMetadata> _answersByMessageId = {};
   final _scrollController = ScrollController();
+  static const _responseLanguagePreferenceKey = 'chat_response_language';
+  String _responseLanguage = 'english';
+  bool _responseLanguageReady = false;
 
   @override
   void initState() {
     super.initState();
+    _loadResponseLanguage();
     final cached = ref.read(chatSnapshotCacheProvider)[widget.conversationId];
     if (cached != null) {
       _applySnapshot(cached);
       _loadingConversation = false;
     }
     _reloadConversation();
+  }
+
+  Future<void> _loadResponseLanguage() async {
+    final preferences = await SharedPreferences.getInstance();
+    final saved = preferences.getString(_responseLanguagePreferenceKey);
+    if (!mounted) return;
+    setState(() {
+      if (saved == 'english' || saved == 'shona' || saved == 'ndebele') {
+        _responseLanguage = saved!;
+      }
+      _responseLanguageReady = true;
+    });
+  }
+
+  Future<void> _setResponseLanguage(String language) async {
+    setState(() => _responseLanguage = language);
+    final preferences = await SharedPreferences.getInstance();
+    await preferences.setString(_responseLanguagePreferenceKey, language);
   }
 
   @override
@@ -192,8 +215,8 @@ class _ChatPageState extends ConsumerState<ChatPage> {
         () =>
             _inlineError =
                 source == ImageSource.camera
-                    ? 'Camera permission is required to capture a leaf photo.'
-                    : 'Photo access permission is required to choose a leaf photo.',
+                    ? 'Camera permission is required to photograph a maize or tomato pest or crop symptom.'
+                    : 'Photo access permission is required to choose a maize or tomato pest or crop symptom photo.',
       );
       return;
     }
@@ -251,13 +274,14 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     }
     setState(() {
       _busy = true;
-      _busyLabel = 'Sending leaf image to AgriLens...';
+      _busyLabel = 'Sending crop photo to AgriLens...';
       _inlineError = null;
     });
     try {
       await widget.chatService.diagnose(
         widget.conversationId,
         path,
+        responseLanguage: _responseLanguage,
         onDiagnosisSaved: () {
           if (mounted) setState(() => _pendingImagePath = null);
         },
@@ -316,7 +340,11 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     }
     _scrollToLatest();
     try {
-      await widget.chatService.ask(widget.conversationId, text);
+      await widget.chatService.ask(
+        widget.conversationId,
+        text,
+        responseLanguage: _responseLanguage,
+      );
       _messageController.clear();
       await widget.onConversationChanged();
       await _reloadConversation();
@@ -343,7 +371,10 @@ class _ChatPageState extends ConsumerState<ChatPage> {
       _inlineError = null;
     });
     try {
-      await widget.chatService.retry(widget.conversationId);
+      await widget.chatService.retry(
+        widget.conversationId,
+        responseLanguage: _responseLanguage,
+      );
       await widget.onConversationChanged();
       await _reloadConversation();
     } catch (error) {
@@ -377,7 +408,9 @@ class _ChatPageState extends ConsumerState<ChatPage> {
   Widget build(BuildContext context) => Column(
     children: [
       ChatActionBar(
-        isBusy: _busy,
+        isBusy: _busy || !_responseLanguageReady,
+        responseLanguage: _responseLanguage,
+        onResponseLanguageChanged: _setResponseLanguage,
         showRetryAction: _hasFailedAssistantMessage,
         onNewChatTap: _newConversation,
         onRetryTap: _retryAssistant,
@@ -418,7 +451,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
         ChatStatusBanner(message: _inlineError!, opacity: 0.35),
       ChatComposer(
         controller: _messageController,
-        isBusy: _busy,
+        isBusy: _busy || !_responseLanguageReady,
         hasPendingImage: _pendingImagePath != null,
         attachmentPreview:
             _pendingImagePath == null

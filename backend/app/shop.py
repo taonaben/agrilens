@@ -477,7 +477,7 @@ class MessageSync(BaseModel):
 class PredictionSync(BaseModel):
     id: UUID
     message_id: UUID
-    class_id: int = Field(ge=0, le=8)
+    class_id: int = Field(ge=0)
     crop: str = Field(pattern="^(maize|tomato)$")
     condition: str = Field(min_length=1, max_length=100)
     decision_state: str = Field(pattern="^(possibleMatch|uncertain|unsupportedOrUnclear)$")

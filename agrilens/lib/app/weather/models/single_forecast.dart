@@ -19,20 +19,29 @@ class SingleForecast {
     this.icon,
   });
 
+  @JsonKey(name: 'forecast_at')
   final DateTime forecastAt;
+  @JsonKey(name: 'temperature_c')
   final double temperatureC;
+  @JsonKey(name: 'feels_like_c')
   final double feelsLikeC;
+  @JsonKey(name: 'humidity_percent')
   final int humidityPercent;
+  @JsonKey(name: 'wind_speed_m_s')
   final double windSpeedMS;
+  @JsonKey(name: 'precipitation_probability')
   final double precipitationProbability;
+  @JsonKey(name: 'rain_3h_mm')
   final double rain3hMm;
+  @JsonKey(name: 'snow_3h_mm')
   final double snow3hMm;
+  @JsonKey(name: 'weather_code')
   final int weatherCode;
   final String condition;
   final String description;
   final String? icon;
 
-     
-  factory SingleForecast.fromJson(Map<String, dynamic> json) => _$SingleForecastFromJson(json);
+  factory SingleForecast.fromJson(Map<String, dynamic> json) =>
+      _$SingleForecastFromJson(json);
   Map<String, dynamic> toJson() => _$SingleForecastToJson(this);
 }

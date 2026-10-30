@@ -28,11 +28,11 @@ Text-only conversations can ask basic maize/tomato crop-care questions without a
 ## V1 scope
 
 - Flutter Android and iOS app; Android is the first device validation target.
-- One leaf image at a time. Supported crops: maize and tomato.
-- The exact nine classes and output order are defined in `../agrilens-training/artifacts/class_map.json`: maize common rust, northern leaf blight, gray leaf spot, healthy; tomato bacterial spot, early blight, late blight, leaf mold, healthy.
+- One maize or tomato image at a time, showing disease symptoms, crop damage, or a visible pest. Supported crops: maize and tomato.
+- The 34-class v2 taxonomy and output order are defined in `../agrilens-training/artifacts/class_map.json`: eight diseases and eight pests for each crop, plus one healthy class per crop. The active backend model version determines which class map is in production.
 - Run the existing `assets/models/agrilens_model.tflite` in FastAPI. Match `../agrilens-training/artifacts/preprocess_contract.json` exactly: 224 x 224 RGB, direct resize, values scaled to 0..1 then normalized with the recorded ImageNet mean and standard deviation. Confirm actual tensor shape, dtype, and output semantics before wiring the endpoint.
 - Use the trained output order, temperature, margin, and other available evidence to return `possible_match`, `uncertain`, or `unsupported_or_unclear`. The policy in `../agrilens-training/artifacts/rejection_policy.json` is a starting contract, not a substitute for implementation and field validation.
-- Reviewed disease guidance is structured content keyed by the class identifier. Gemini may explain it but cannot replace the classifier or invent treatment advice.
+- Reviewed condition guidance is structured content keyed by the class identifier. Gemini may explain it but cannot replace the classifier or invent treatment advice.
 - Text-only conversations may cover greetings and basic maize/tomato crop-care questions. Without a saved classifier result, the app must not identify a leaf condition or show product suggestions; it should ask for a photo when the user wants an image assessed.
 - Navigation retains Chat, Store, Weather, History, and bottom Settings. Store and Weather may remain honest placeholders while diagnosis is built.
 
@@ -65,7 +65,7 @@ Text-only conversations can ask basic maize/tomato crop-care questions without a
 
 ## Out of scope for the first diagnosis milestone
 
-Automatic treatment or pesticide prescriptions; severity or yield estimation; whole-field assessment; multi-leaf detection; disease classes outside the nine-class map; weather and commerce integrations; a general-purpose chatbot beyond bounded maize/tomato crop-care conversation.
+Automatic treatment or pesticide prescriptions; severity or yield estimation; whole-field assessment; multi-leaf detection; crop-condition classes outside the active class map; weather and commerce integrations; a general-purpose chatbot beyond bounded maize/tomato crop-care conversation.
 
 ## Decisions reserved for the project owner
 

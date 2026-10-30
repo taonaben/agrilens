@@ -1,24 +1,13 @@
-I’m building the plant disease image classifier for AgriLens, an offline-first farming assistant.
+I’m building the plant disease image classifier for AgriLens, a server-backed farming assistant.
 
-Help me develop one lightweight, multi-class image classification model using MobileNetV3-Small with pretrained weights and transfer learning. The model should analyse a photograph of a maize or tomato leaf and predict which supported crop-condition class it resembles.
-
-The initial nine classes are:
-1. Maize — common rust
-2. Maize — northern leaf blight
-3. Maize — gray leaf spot
-4. Maize — healthy
-5. Tomato — bacterial spot
-6. Tomato — early blight
-7. Tomato — late blight
-8. Tomato — leaf mold
-9. Tomato — healthy
+Help me develop one lightweight, multi-class image classification model using MobileNetV3-Small with pretrained weights and transfer learning. The v2 model supports 34 classes: eight diseases and eight pests for each crop, plus healthy maize and healthy tomato. It analyses a maize or tomato photo and predicts which supported crop-condition class it resembles; pest images may show the pest or characteristic crop damage.
 
 Expected behaviour:
-- Accept one leaf image and return scores for the nine classes.
+- Accept one leaf image and return scores for every class in the active versioned class map.
 - Provide a predicted crop and condition, expressed as a possible condition rather than a confirmed diagnosis.
 - Support an uncertainty/rejection mechanism for unclear images, unsupported conditions, and unrelated inputs. Do not assume a softmax confidence threshold alone reliably detects these.
 - Treat “healthy” as a supported class prediction, not proof that the plant has no problems.
-- Run entirely offline inside a Flutter mobile app after conversion to TensorFlow Lite (.tflite).
+- Run in the FastAPI backend using the version-matched TensorFlow Lite (.tflite) model. Flutter sends photos to FastAPI over HTTPS and displays the returned possible match.
 - Keep model size, inference time, and memory use suitable for mobile devices.
 
 This is an image classifier, not an LLM, object detector, or disease-severity estimator. It does not generate treatment advice. Verified agricultural guidance and a separate hosted conversational LLM handle explanations elsewhere in AgriLens.
@@ -33,7 +22,7 @@ Development environment:
 - A basic conversion test using litert-torch in Google Colab successfully produced a .tflite file with outputs matching PyTorch. Conversion with trained weights and execution inside Flutter still require verification.
 
 Dataset and workflow:
-- Start with original PlantVillage colour images for the nine classes.
+- Use reviewed source images organized into one curated folder for each class in the ordered 34-class map. Preserve source data and include realistic field images.
 - Inspect labels, image quality, class balance, duplicates, and related images of the same leaf.
 - Keep related images in the same split to prevent data leakage.
 - Create reproducible training, validation, and held-out test splits.
@@ -44,6 +33,6 @@ Dataset and workflow:
 - Export trained weights, a TFLite model, the exact ordered class mapping, preprocessing specifications, and evaluation results.
 - Compare PyTorch and TFLite outputs and benchmark the model on a representative Android phone.
 
-The desired outcome is a reproducible, compact offline baseline that recognises supported leaf conditions, communicates uncertainty appropriately, and has measured limitations.
+The desired outcome is a reproducible, compact server inference model that recognises supported leaf conditions, communicates uncertainty appropriately, and has measured limitations.
 
 Guide me step by step with explained Jupyter notebook cells. Preserve the working DirectML environment and keep conversion dependencies in a separate environment.

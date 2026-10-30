@@ -1,6 +1,6 @@
 # AgriLens FastAPI service
 
-This service runs the nine-class TFLite classifier and requests bounded explanations from Gemini. Every protected endpoint requires a valid Supabase Auth access token; the Gemini key stays in the backend environment. The approved history design stores conversations in Supabase Postgres and original photos in the private `agrilens-history` Storage bucket, with FastAPI mediating all client access. Photos are retained until conversation deletion.
+This service runs the active versioned crop-condition TFLite classifier and requests bounded explanations from Gemini. Every protected endpoint requires a valid Supabase Auth access token; the Gemini key stays in the backend environment. The approved history design stores conversations in Supabase Postgres and original photos in the private `agrilens-history` Storage bucket, with FastAPI mediating all client access. Photos are retained until conversation deletion.
 
 ## Container setup
 
@@ -16,7 +16,7 @@ Use Linux x86_64 or ARM64 with CPython 3.11, supported by the available `tflite-
 
 Run with `uvicorn --env-file .env app.main:app --host 0.0.0.0 --port 8000` from this directory. Flutter should call the service over HTTPS in deployed environments. Local HTTP is for development only.
 
-The deployed service must be given `agrilens_model.tflite` and the three versioned contract files (`class_map.json`, `preprocess_contract.json`, `rejection_policy.json`). The Flutter model assets are git-ignored today, so they are not automatically present in a deployment checkout.
+Keep the current nine-class bundle together until the expanded model is trained and exported. Stage a v2 bundle with its matching `agrilens_model.tflite`, `class_map.json`, `preprocess_contract.json`, and `rejection_policy.json`, then switch the model and contract files together. For local Compose, set `AGRILENS_MODEL_HOST_PATH` and `AGRILENS_ARTIFACTS_HOST_DIR` in `.env` to the v2 bundle locations. Production deployments must package or mount all four matching files. The Flutter model assets are git-ignored today, so they are not automatically present in a deployment checkout.
 
 ## API
 
@@ -24,7 +24,7 @@ The deployed service must be given `agrilens_model.tflite` and the three version
 - `POST /auth/register`: JSON `{ "email": "...", "password": "..." }`; creates a Supabase Auth account. Whether a session is returned depends on Supabase email-confirmation settings.
 - `POST /auth/login`: JSON `{ "email": "...", "password": "..." }`; returns the Supabase Auth session, including the access token Flutter sends as a bearer token to protected endpoints.
 - `POST /v1/diagnoses`: multipart `image` and `conversation_id`; stores the original photo and typed prediction in that conversation, then returns score evidence.
-- `POST /v1/answers`: JSON `{ "conversation_id": "...", "user_follow_up": "..." }` (follow-up optional); the server loads the saved prediction and recent turns, calls Gemini, and persists the answer with selected product/source metadata.
+- `POST /v1/answers`: JSON `{ "conversation_id": "...", "user_follow_up": "...", "response_language": "english" }` (`user_follow_up` and `response_language` optional; language accepts `english`, `shona`, or `ndebele` and defaults to English); the server loads the saved prediction and recent turns, calls Gemini, and persists the answer with selected product/source metadata.
 - `POST /v1/conversations`: create an authenticated conversation with `{ "title": "..." }`.
 - `GET /v1/conversations`: list the signed-in user's conversations (paginated with `limit` and `offset`; Flutter loads every page).
 - `GET /v1/conversations/{id}`: return messages, predictions, answer metadata, and mediated image URLs.

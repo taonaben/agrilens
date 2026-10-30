@@ -16,7 +16,7 @@ class CustomTextfield extends StatelessWidget {
   final ValueChanged<String>? onChanged;
   final FocusNode? focusNode;
   final FormFieldValidator<String>? validator;
-
+  final List<String>? autofillHints;
   final List<TextInputFormatter>? inputFormatters;
   final Widget? suffixWidget;
   final Widget? prefixWidget;
@@ -39,6 +39,7 @@ class CustomTextfield extends StatelessWidget {
     this.minLines = 1,
     this.maxLength,
     this.keyboardType = TextInputType.text,
+    this.autofillHints,
     this.controller,
     this.onChanged,
     this.focusNode,
@@ -82,7 +83,7 @@ class CustomTextfield extends StatelessWidget {
       readOnly: readOnly,
       enabled: enabled,
       onChanged: onChanged,
-
+      autofillHints: autofillHints,
       onFieldSubmitted: onFieldSubmitted,
       validator: validator,
       inputFormatters: inputFormatters,
