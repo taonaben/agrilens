@@ -1,8 +1,12 @@
 import 'package:agrilens/app/auth/services/auth_service.dart';
 import 'package:agrilens/app/weather/services/weather_location_service.dart';
 import 'package:agrilens/shared/api/api_client.dart';
+import 'package:agrilens/shared/components/custom_filled_btn.dart';
 import 'package:agrilens/shared/components/custom_progress_indicator.dart';
+import 'package:agrilens/shared/components/custom_textfield.dart';
+import 'package:agrilens/shared/utils/app_constants.dart';
 import 'package:flutter/material.dart';
+import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
 
 class AuthPage extends StatefulWidget {
@@ -121,35 +125,36 @@ class _AuthPageState extends State<AuthPage> {
                         : 'Welcome to AgriLens',
                     style: theme.textTheme.headlineSmall,
                   ),
-                  const SizedBox(height: 8),
+                  const Gap(AppConstants.gapSmall),
                   Text(
                     widget.isRegister
                         ? 'Create an account to use diagnosis and chat.'
                         : 'Sign in to diagnose a leaf and continue your conversations.',
                   ),
-                  const SizedBox(height: 24),
-                 
-                  TextFormField(
+                  const Gap(AppConstants.gapMedium),
+
+                  CustomTextfield(
                     controller: _emailController,
                     keyboardType: TextInputType.emailAddress,
+                    labelText: 'Email',
                     autofillHints: const [AutofillHints.email],
-                    decoration: const InputDecoration(labelText: 'Email'),
                     validator:
                         (value) =>
                             value == null || !value.contains('@')
                                 ? 'Enter a valid email address.'
                                 : null,
                   ),
-                  const SizedBox(height: 12),
-                  TextFormField(
+                  const Gap(AppConstants.gapSmall),
+
+                  CustomTextfield(
                     controller: _passwordController,
                     obscureText: true,
+                    labelText: 'Password',
                     autofillHints: [
                       widget.isRegister
                           ? AutofillHints.newPassword
                           : AutofillHints.password,
                     ],
-                    decoration: const InputDecoration(labelText: 'Password'),
                     validator:
                         (value) =>
                             value == null || value.length < 8
@@ -158,25 +163,22 @@ class _AuthPageState extends State<AuthPage> {
                     onFieldSubmitted: (_) => _submit(),
                   ),
                   if (_error != null) ...[
-                    const SizedBox(height: 12),
+                    const Gap(AppConstants.gapSmall),
                     Text(
                       _error!,
                       style: TextStyle(color: theme.colorScheme.error),
                     ),
                   ],
-                  const SizedBox(height: 20),
-                  FilledButton(
-                    onPressed: _busy ? null : _submit,
-                    child:
-                        _busy
-                            ? const SizedBox.square(
-                              dimension: 18,
-                              child: CustomProgressIndicator(),
-                            )
-                            : Text(
-                              widget.isRegister ? 'Create account' : 'Sign in',
-                            ),
+                  const Gap(AppConstants.gapMedium),
+                 
+                  CustomFilledButton(
+                    btnLabel: widget.isRegister ? 'Create account' : 'Sign in',
+                    onTap: () {
+                      _submit();
+                    },
+                    isLoading: _busy,
                   ),
+                  const Gap(AppConstants.gapSmall),
                   TextButton(
                     onPressed:
                         _busy
