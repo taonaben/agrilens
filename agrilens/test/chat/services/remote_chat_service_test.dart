@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:dio/dio.dart';
@@ -55,6 +56,54 @@ class _ConversationAdapter implements HttpClientAdapter {
   void close({bool force = false}) {}
 }
 
+class _AnswerCaptureAdapter implements HttpClientAdapter {
+  final requestBodies = <Map<String, dynamic>>[];
+
+  @override
+  Future<ResponseBody> fetch(
+    RequestOptions options,
+    Stream<Uint8List>? requestStream,
+    Future<void>? cancelFuture,
+  ) async {
+    if (options.path.endsWith('/v1/diagnoses')) {
+      return ResponseBody.fromString(
+        jsonEncode({
+          'class_id': 1,
+          'crop': 'maize',
+          'condition': 'common_rust',
+          'decision_state': 'possible_match',
+          'top_logit': 2.0,
+          'calibrated_score': 0.8,
+          'margin': 0.3,
+          'model_version': 'test-model',
+          'preprocess_version': 'test-preprocess',
+        }),
+        200,
+        headers: {
+          Headers.contentTypeHeader: ['application/json'],
+        },
+      );
+    }
+    final bytes =
+        await requestStream?.fold<List<int>>(
+          <int>[],
+          (all, chunk) => all..addAll(chunk),
+        ) ??
+        <int>[];
+    requestBodies.add(jsonDecode(utf8.decode(bytes)) as Map<String, dynamic>);
+    return ResponseBody.fromString(
+      jsonEncode({'answer': 'Mhinduro.', 'products': [], 'sources': []}),
+      200,
+      headers: {
+        Headers.contentTypeHeader: ['application/json'],
+      },
+    );
+  }
+
+  @override
+  void close({bool force = false}) {}
+}
+
 void main() {
   test(
     'server history accepts a condition outside the legacy local class map',
@@ -74,6 +123,58 @@ void main() {
       expect(snapshot.predictions['message-1']?.condition, 'thrips');
     },
   );
+
+  test('follow-up and retry send the selected reply language', () async {
+    final adapter = _AnswerCaptureAdapter();
+    final dio = Dio(BaseOptions(baseUrl: 'https://example.org'))
+      ..httpClientAdapter = adapter;
+    final service = RemoteChatService(
+      ApiClient(dio: dio, accessTokenProvider: () async => 'test-token'),
+    );
+
+    await service.ask(
+      'conversation-1',
+      'Chii chandingaite?',
+      responseLanguage: 'shona',
+    );
+    await service.retry('conversation-1', responseLanguage: 'shona');
+
+    expect(adapter.requestBodies, [
+      {
+        'conversation_id': 'conversation-1',
+        'user_follow_up': 'Chii chandingaite?',
+        'response_language': 'shona',
+      },
+      {'conversation_id': 'conversation-1', 'response_language': 'shona'},
+    ]);
+  });
+
+  test('diagnosis answer sends the selected reply language', () async {
+    final adapter = _AnswerCaptureAdapter();
+    final dio = Dio(BaseOptions(baseUrl: 'https://example.org'))
+      ..httpClientAdapter = adapter;
+    final service = RemoteChatService(
+      ApiClient(dio: dio, accessTokenProvider: () async => 'test-token'),
+    );
+    final directory = await Directory.systemTemp.createTemp('agrilens-chat-');
+    final image = await File(
+      '${directory.path}/leaf.jpg',
+    ).writeAsBytes([1, 2, 3]);
+
+    try {
+      await service.diagnose(
+        'conversation-1',
+        image.path,
+        responseLanguage: 'ndebele',
+      );
+      expect(adapter.requestBodies.single, {
+        'conversation_id': 'conversation-1',
+        'response_language': 'ndebele',
+      });
+    } finally {
+      await directory.delete(recursive: true);
+    }
+  });
 
   test(
     'answer metadata parses cited sources and verified product suggestions',

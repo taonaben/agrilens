@@ -118,6 +118,7 @@ class SmartAnswerTests(unittest.IsolatedAsyncioTestCase):
         self.assertTrue(body["products"][0]["image_url"].endswith("BLIGHT-01/item.webp"))
         self.assertEqual(body["sources"][0]["id"], SOURCE_ID)
         self.assertIsNone(generate.await_args.kwargs["weather"])
+        self.assertEqual(generate.await_args.kwargs["response_language"], "english")
         self.answer_persistence_mock.assert_awaited_once()
         self.assertEqual(self.answer_persistence_mock.await_args.kwargs["metadata"]["sources"][0]["id"], SOURCE_ID)
 
@@ -213,6 +214,28 @@ class SmartAnswerTests(unittest.IsolatedAsyncioTestCase):
         )
         self.assertEqual(response.status_code, 422)
 
+    async def test_answer_accepts_shona_and_ndebele_response_languages(self):
+        with (
+            patch("app.main.load_answer_context", new=AsyncMock(return_value={"products": [], "guidance": []})),
+            patch("app.main.generate_answer", new=AsyncMock(return_value=GeneratedAnswer(answer="Mhinduro."))) as generate,
+        ):
+            for language in ("shona", "ndebele"):
+                response = await self.client.post(
+                    "/v1/answers",
+                    headers={"Authorization": "Bearer user-token"},
+                    json={"conversation_id": "da622fec-94f6-4cc7-9a1f-2398f2cac944", "response_language": language},
+                )
+                self.assertEqual(response.status_code, 200, response.text)
+                self.assertEqual(generate.await_args.kwargs["response_language"], language)
+
+    async def test_answer_rejects_unsupported_response_language(self):
+        response = await self.client.post(
+            "/v1/answers",
+            headers={"Authorization": "Bearer user-token"},
+            json={"conversation_id": "da622fec-94f6-4cc7-9a1f-2398f2cac944", "response_language": "swahili"},
+        )
+        self.assertEqual(response.status_code, 422)
+
     async def test_failed_gemini_response_is_persisted_and_marks_follow_up_saved(self):
         with (
             patch("app.main.load_answer_context", new=AsyncMock(return_value={"products": [], "guidance": []})),
@@ -289,7 +312,10 @@ class SmartAnswerTests(unittest.IsolatedAsyncioTestCase):
         response = SimpleNamespace(
             candidates=[],
             parsed=None,
-            text='{"answer":"Rain is forecast soon.","product_ids":[],"source_ids":[]}',
+            text=(
+                f'{{"answer":"Rain is forecast soon.","product_ids":["{PRODUCT_ID}"],'
+                f'"source_ids":["{SOURCE_ID}"]}}'
+            ),
         )
 
         class FakeAsyncClient:
@@ -315,6 +341,7 @@ class SmartAnswerTests(unittest.IsolatedAsyncioTestCase):
         ):
             generated = await generate_answer(
                 prediction=_prediction(), prior_messages=[], user_follow_up="Should I water?",
+                response_language="shona",
                 weather=context["weather"], guidance=context["guidance"], products=context["products"],
             )
         call = fake_client.aio.client.models.generate_content.await_args
@@ -325,9 +352,12 @@ class SmartAnswerTests(unittest.IsolatedAsyncioTestCase):
         self.assertIn(SOURCE_ID, prompt)
         self.assertIn("plausible causes", call.kwargs["config"].system_instruction)
         self.assertIn("naturally name any selected product", prompt)
+        self.assertIn("Write the answer text in Shona", prompt)
         self.assertNotIn("confidence=0.700", prompt)
         self.assertEqual(call.kwargs["config"].response_mime_type, "application/json")
         self.assertEqual(generated.answer, "Rain is forecast soon.")
+        self.assertEqual(generated.product_ids, [PRODUCT_ID])
+        self.assertEqual(generated.source_ids, [SOURCE_ID])
 
     async def test_gemini_includes_model_score_only_when_farmer_asks(self):
         response = SimpleNamespace(

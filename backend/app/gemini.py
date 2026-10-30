@@ -104,6 +104,7 @@ async def generate_answer(
     prediction: dict | None,
     prior_messages: list[dict[str, str]],
     user_follow_up: str | None,
+    response_language: str = "english",
     weather: dict[str, Any] | None = None,
     guidance: list[dict[str, Any]] | None = None,
     products: list[dict[str, Any]] | None = None,
@@ -165,7 +166,11 @@ async def generate_answer(
         "scores out unless the farmer asks. Reply in concise, complete, plain-language Markdown. Use short paragraphs; "
         "use bullets only for multiple steps or observations. Do not end mid-sentence. "
         "Return only the structured fields required by the response schema. "
-        "Use product_ids and source_ids only from the supplied context."
+        "Use product_ids and source_ids only from the supplied context. "
+        f"Write the answer text in {response_language.capitalize()}. Preserve supplied proper names, "
+        "including product names, and keep product_ids and source_ids unchanged. "
+        "For Shona, use clear, natural Zimbabwean Shona; for Ndebele, use clear, natural Zimbabwean "
+        "isiNdebele. Explain technical terms simply in either language."
     )
     try:
         async with client.aio as async_client:

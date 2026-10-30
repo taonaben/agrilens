@@ -249,6 +249,7 @@ class RemoteChatService {
   Future<AnswerMetadata> diagnose(
     String conversationId,
     String imagePath, {
+    String responseLanguage = 'english',
     void Function()? onDiagnosisSaved,
   }) async {
     final token = _newToken();
@@ -262,23 +263,33 @@ class RemoteChatService {
     onDiagnosisSaved?.call();
     final answer = await _api.postJson('/v1/answers', {
       'conversation_id': conversationId,
+      'response_language': responseLanguage,
     }, cancelToken: token);
     return AnswerMetadata.fromJson(answer);
   }
 
-  Future<AnswerMetadata> ask(String conversationId, String text) async {
+  Future<AnswerMetadata> ask(
+    String conversationId,
+    String text, {
+    String responseLanguage = 'english',
+  }) async {
     final token = _newToken();
     final answer = await _api.postJson('/v1/answers', {
       'conversation_id': conversationId,
       'user_follow_up': text,
+      'response_language': responseLanguage,
     }, cancelToken: token);
     return AnswerMetadata.fromJson(answer);
   }
 
-  Future<AnswerMetadata> retry(String conversationId) async {
+  Future<AnswerMetadata> retry(
+    String conversationId, {
+    String responseLanguage = 'english',
+  }) async {
     final token = _newToken();
     final answer = await _api.postJson('/v1/answers', {
       'conversation_id': conversationId,
+      'response_language': responseLanguage,
     }, cancelToken: token);
     return AnswerMetadata.fromJson(answer);
   }

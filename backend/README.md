@@ -24,7 +24,7 @@ Keep the current nine-class bundle together until the expanded model is trained 
 - `POST /auth/register`: JSON `{ "email": "...", "password": "..." }`; creates a Supabase Auth account. Whether a session is returned depends on Supabase email-confirmation settings.
 - `POST /auth/login`: JSON `{ "email": "...", "password": "..." }`; returns the Supabase Auth session, including the access token Flutter sends as a bearer token to protected endpoints.
 - `POST /v1/diagnoses`: multipart `image` and `conversation_id`; stores the original photo and typed prediction in that conversation, then returns score evidence.
-- `POST /v1/answers`: JSON `{ "conversation_id": "...", "user_follow_up": "..." }` (follow-up optional); the server loads the saved prediction and recent turns, calls Gemini, and persists the answer with selected product/source metadata.
+- `POST /v1/answers`: JSON `{ "conversation_id": "...", "user_follow_up": "...", "response_language": "english" }` (`user_follow_up` and `response_language` optional; language accepts `english`, `shona`, or `ndebele` and defaults to English); the server loads the saved prediction and recent turns, calls Gemini, and persists the answer with selected product/source metadata.
 - `POST /v1/conversations`: create an authenticated conversation with `{ "title": "..." }`.
 - `GET /v1/conversations`: list the signed-in user's conversations (paginated with `limit` and `offset`; Flutter loads every page).
 - `GET /v1/conversations/{id}`: return messages, predictions, answer metadata, and mediated image URLs.
